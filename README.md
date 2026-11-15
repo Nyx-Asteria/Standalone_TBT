@@ -96,20 +96,29 @@ Android Auto 카카오내비는 아직 앱별 실차 검증 결과가 없습니�
 
 ## 차량 호환성
 
-현재 다음 차량에서 동작이 확인되었습니다.
+현재 다음 차량에서 동작이 확인되었습니다. 표에 없는 앱·연결 방식이나 세부 기능은 별도로 검증되지 않았을 수 있습니다.
 
 | 차량 | AVN | 소프트웨어 | 검증 구분 |
 | --- | --- | --- | --- |
 | Hyundai Palisade LX2 PE (2023) | Gen5W | `LX2PE.KOR.0000.V039.001.260902` | 개발 차량 |
-| Kia Stinger Meister 3.3 (2023) | Gen5W S5W_M | `CK_PE_22.KOR.S5W_M.V039.001.260902` | 사용자 확인 |
+| Hyundai Palisade (2022) | Gen5W (세부 사양 미확인) | 미확인 | 사용자 제보 |
+| Kia Stinger Meister 3.3 (2023) | Gen5W S5W_M | `CK_PE_22.KOR.S5W_M.V039.001.260902` | 사용자 제보 |
+| Kia K5 DL3 1.6T (2022) | Gen5W | `DL322.KOR.0000.V039.001.260902` | 사용자 제보 |
+| Hyundai Sonata DN8 HEV (2022) | Gen5W | `DN822HEV.KOR.0000.V039.001.260902` | 사용자 제보 |
 
-### Hyundai Palisade LX2 PE
+### Hyundai Palisade LX2 PE (2023)
 
 개발 및 실차 검증 기준 차량입니다.
 
 CarPlay NAVER 지도·TMAP 및 Android Auto NAVER 지도·TMAP의 주요 TBT 기능이 시험되었습니다.
 
-### Kia Stinger Meister 3.3
+### Hyundai Palisade (2022)
+
+**유선 CarPlay + TMAP**의 기본 TBT 정상 동작이 제보되었습니다.
+
+계기판·HUD별 세부 기능과 AVN 전체 소프트웨어 버전은 확인되지 않았습니다.
+
+### Kia Stinger Meister 3.3 (2023)
 
 외부 사용자 제보를 통해 다음 조합의 정상 동작이 확인되었습니다.
 
@@ -118,6 +127,20 @@ CarPlay NAVER 지도·TMAP 및 Android Auto NAVER 지도·TMAP의 주요 TBT 기
 - Phone Projection TBT v0.1.46 및 v0.1.58 동작 사례
 
 스팅어의 TMAP, 카카오내비 및 Android Auto는 아직 시험되지 않았습니다.
+
+[Stinger Meister 호환성 제보 — Issue #2](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/issues/2)
+
+### Kia K5 DL3 1.6T (2022)
+
+**Android Auto + NAVER 지도**의 기본 TBT 동작이 확인되었습니다(사용 버전: v0.1.58).
+
+다만 해당 버전에서 과속카메라 접근 시 기존 안내가 일시적으로 직진 표시로 변경되는 현상이 제보되었습니다. 다른 세부 기능까지 모두 검증됐다는 의미는 아닙니다.
+
+### Hyundai Sonata DN8 HEV (2022)
+
+**Android Auto + NAVER 지도**의 기본 TBT 동작이 확인되었습니다(사용 버전: v0.1.58).
+
+다만 해당 버전에서 실제 목적지까지 약 1.3km가 남았는데 계기판·HUD에 도착으로 표시되는 현상이 제보되었습니다. 다른 세부 기능까지 모두 검증됐다는 의미는 아닙니다.
 
 > 설치 패키지는 차종·국가·펌웨어를 제한하지 않지만, 이는 모든 차량에 대한 호환성 보증이 아닙니다. 네이티브 수정은 확인된 라이브러리 빌드에서만 적용됩니다.
 
