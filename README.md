@@ -1,60 +1,274 @@
+
 # HMG Phone Projection TBT
 
-[English](README.en.md) · [한국어](README.md)
+[한국어](README.md) · [English](README.en.md) · [Documentation (Wiki)](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/wiki)
 
-폰 내비게이션 길안내를 계기판으로 전달하는 HMG-API 커뮤니티 모드입니다. CarPlay와 Android Auto 수신 경로를 각각 포함합니다. 실제 표시는 지도 앱이 보내는 데이터, 차량의 HMG-API 맵과 계기판에 따라 달라집니다.
+**Apple CarPlay 및 Android Auto의 내비게이션 길안내 정보를 현대·기아·제네시스 차량의 계기판과 HUD로 전달하는 HMG-API 커뮤니티 모드입니다.**
 
-이 모드는 **무선 프로젝션을 활성화하지 않습니다.** 무선 CarPlay나 Android Auto가 헤드유닛에 이미 연결되어야 합니다.
+Phone Projection에서 제공하는 Turn-by-Turn(TBT) 안내 정보를 수신하고, 차량의 `NavigationCluster` 인터페이스를 통해 계기판 및 HUD에 전달합니다.
 
-## 앱·연결 방식별 지원 상태
+CarPlay와 Android Auto의 수신 경로를 각각 구현했으며, 계기판 출력 계층을 공유합니다.
 
-아래에서 “구현”은 해당 수신 경로가 앱에서 실제로 제공되는 데이터를 처리한다는 뜻이며, 모든 경로에서 계기판 표시가 확인됐다는 의미는 아닙니다.
+> [!IMPORTANT]
+> **이 모드는 무선 CarPlay 또는 무선 Android Auto를 활성화하지 않습니다.**
+>
+> 유선 또는 무선 Phone Projection 연결이 이미 정상적으로 작동하고 있어야 합니다.
+>
+> 이 프로젝트는 비공식 커뮤니티 모드이며, 모든 차량과 펌웨어에서의 작동을 보장하지 않습니다.
 
-| 프로젝션 / 앱 | 현재 안내 | 다음 안내 | 목적지 잔여 거리 | 차선 데이터 | 최근 상태와 알려진 문제 |
-| --- | --- | --- | --- | --- | --- |
-| CarPlay · 네이버 지도 | 구현, 실차 시험 | 앱이 다음 안내를 보내면 처리. 0.1.57에서 시작 처리 개선 | 앱이 보내면 처리 | 구현. 복합 화살표별 색상 처리. 포켓 표시는 최신 순정 차선 데이터의 수·방향이 맞아야 함 | CarPlay 중 가장 많이 시험됨. <br>최신 시작·차선·시설 변경은 0.1.58 실차 재시험이 필요합니다. <br>휴게소 심볼은 미해결이며, 일부 고가·지하차도 정보는 폰 데이터에 없습니다. |
-| CarPlay · TMAP | 구현 | 수신 시 처리. 간헐적 미표시 제보 있음 | 앱이 보내면 처리 | 일부 구현: 기록된 직좌·직우 변환은 0.1.55에서 수정했으나 주행 가능·추천 차선이 빠지는 문제가 남음 | 요금소·휴게소 그림이 불안정합니다. <br>회전교차로와 차선 동작을 앱별로 다시 실차 확인해야 합니다. |
-| CarPlay · 카카오내비 | 구현 | 수신 시 처리. 0.1.57에서 시작 시 다음 안내 선택 보완 | 앱이 보내면 처리 | 앱별 차선 출력은 미검증 | 기록된 회전교차로 이벤트에서 각도가 빠지면 TBT 출력이 중단됐습니다.<br>0.1.58은 방향을 추측하지 않고 문구·거리를 유지하도록 바꿨지만, 실차 확인은 아직입니다. |
-| Android Auto · 네이버 지도 | 시험 수신 경로 구현 | 다음 안내 이벤트를 처리하지만 시험 차량에서 자주 미표시 | 잔여 거리 이벤트 처리. 실차 표시가 불안정하거나 미확인 | 차선 이벤트 처리. 추천 차선 동작은 미확인 | 사용자 시험에서 다음 안내·목적지 잔여 거리 누락이 보고됐습니다. <br>안내 종료 로딩과 한글 표시 문제도 제보됐으며, 한글 디코딩을 보완했지만 최신 실차 결과는 미확인입니다. |
-| Android Auto · TMAP | 시험 수신 경로 구현 | 다음 안내 이벤트를 처리하지만 사용자 시험에서 미표시 | 잔여 거리 이벤트 처리. 실차 미확인 | 차선 이벤트 처리. 추천 차선 동작은 미확인 | 사용자 시험에서 TBT 로딩과 다음 안내 일부 미표시가 보고됐습니다. |
-| Android Auto · 카카오내비 | 공통 수신 경로만 구현 | 시험 안 함 | 시험 안 함 | 시험 안 함 | 앱별 동작과 실차 호환성은 모릅니다. |
+**Latest Release:** [v0.1.58 (Prerelease)](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/releases/tag/v0.1.58)
 
-### 공통 표시 동작
+---
 
-- CarPlay와 Android Auto는 서로 다른 길안내 수신부를 쓰고, 계기판 출력 계층을 공유합니다.
-- 차선 색상: 회색은 경로 이탈 방향, 흰색은 경로상 주행 가능 방향, 파란색은 앱 추천 방향입니다. 앱이 차선 정보를 충분히 보내야 하며, 없는 추천 정보를 만들어내지 않습니다.
-- 순정 포켓 차선 표시는 최신 순정 데이터의 차선 수와 방향 구성이 맞을 때만 가져옵니다.
-- 휴게소·요금소 그림, 회전교차로 도식, 고가·지하차도 옆길 구분은 앱 전반에서 안정적이지 않습니다. 소스 정보가 없으면 추측하지 않습니다.
+## 주요 기능
 
-## 시험 차량과 호환성
+| 기능 | 설명 |
+| --- | --- |
+| 현재 안내 | 현재 진행 중인 회전 및 경로 안내 |
+| 다음 안내 | 다음 안내 지점의 방향과 거리 |
+| 안내 지점 거리 | 현재 안내 지점까지의 남은 거리 |
+| 목적지 잔여 거리 | 최종 목적지까지의 남은 거리 |
+| 차선 안내 | 차선별 진행 방향 및 추천 상태 |
+| 특수 안내 | 일부 회전교차로 및 도로 시설 안내 |
+| 계기판 출력 | 계기판 내비게이션 영역에 TBT 표시 |
+| HUD 출력 | 지원되는 차량의 HUD에 안내 표시 |
 
-| 국가 | 차량 | AVN 소프트웨어 |
-| --- | --- | --- |
-| 대한민국 (KOR) | 현대 팰리세이드 2023년식 LX2 PE, 순정 Gen5W | `LX2PE.KOR.0000.V039.001.260902` |
+실제 표시 가능한 정보는 내비게이션 앱이 제공하는 데이터, 차량의 HMG-API 맵 및 계기판 펌웨어에 따라 달라질 수 있습니다.
 
-다른 차종·계기판·국가·펌웨어는 미확인입니다. 설치 파일은 차종·국가·펌웨어를 제한하지 않지만, 이것은 호환성 보증이 아닙니다. [HMG-API](https://github.com/VysseCodes/HMG-API) 1.0.2 이상과 해당 차량의 **Hooks on (map checked)** 상태가 필요합니다. 네이티브 수정은 확인된 라이브러리 빌드에서만 적용됩니다.
+### 차선 표시
 
-## 설치
+| 색상 | 의미 |
+| --- | --- |
+| 회색 | 경로에서 벗어나는 방향 |
+| 흰색 | 경로상 주행 가능한 방향 |
+| 파란색 | 내비게이션 앱에서 추천하는 방향 |
 
-- **최초 설치:** HMG-API를 먼저 설치한 뒤 NEMESIS에서 `phone-projection-tbt-0.1.58-nemesis-package.zip`을 설치합니다.
-- **기존 TBT 업데이트:** `phone-projection-tbt-0.1.58.zip`을 압축 해제하지 않고 USB의 `HMGAPI/updates/`에 복사합니다. 이전 Phone Projection TBT 업데이트 ZIP을 제거합니다. 정차 상태에서 **Check USB updates → Apply changes → Restart Unit**을 실행합니다.
-- **소스:** `phone-projection-tbt-0.1.58-source.zip`에 소스와 호스트 회귀 검사가 들어 있습니다.
+복합 차선의 각 화살표 방향별 상태를 처리하며, 일부 포켓 차선은 호환되는 최신 순정 차선 데이터를 이용합니다.
 
-CarPlay 네이버 지도에서는 CarPlay HUD 연동을 켜고 계기판 길안내 화면을 선택하세요. 중복 계기판 출력을 피하려면 다른 프로젝션 모드의 TBT 기능은 꺼 주세요. 기존 모드 ID와 서명자는 유지되어 같은 설치의 업데이트로 인식됩니다.
+앱에서 제공하지 않는 추천 차선이나 시설 정보는 임의로 생성하지 않습니다.
 
-## 알려진 한계와 미확인 사항
+[지원 기능 자세히 보기](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/wiki/Features)
 
-- 0.1.58은 호스트 회귀 검사, 컴파일, 서명 검증을 통과했습니다. 카카오 회전교차로 대체 처리, 다음 안내 대체 처리와 시작 시점 변경은 실차 검증이 남아 있습니다.
-- Android Auto는 시험 기능입니다. 네이버 지도와 TMAP에서 다음 안내 누락이 보고됐고, TMAP은 로딩 화면이 나타난 적이 있습니다. 잔여 거리·추천 차선·안내 종료 동작도 실차 검증이 필요합니다. Android Auto 카카오내비는 시험하지 않았습니다.
-- 휴게소 단독 심볼은 확인되지 않았습니다. 코드 183은 진출 도식으로 표시됐고, 181·182는 시험 주행에서 단독 심볼이 확인되지 않았습니다.
-- 요금소·휴게소·터널·고가/지하차도 옆길이 일반 회전으로만 전달될 수 있습니다. 구분 가능한 앱 정보가 없으면 전용 그림을 안정적으로 선택할 수 없습니다.
-- 앱에서 비보호 좌회전 속성을 보내지 않으면 일반 좌회전으로 표시됩니다.
-- 앱이 차선 추천을 보내지 않거나 순정 차선 정보와 맞지 않으면 추천·포켓 차선이 표시되지 않을 수 있습니다.
+---
 
-## 다른 차량 제보와 문제 신고
+## 앱별 지원 현황
 
-[GitHub Issues](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/issues/new)에 `[국가 / 차종 코드 / 펌웨어] 증상` 제목으로 작성해 주세요. 차량 연식·국가·계기판·AVN 펌웨어 전체 버전, HMG-API/모드/앱 버전, 연결 방식, 기대·실제 결과, 재현 순서와 발생 시각을 포함해 주세요. 필요하면 로그와 시각이 기록된 사진도 첨부하세요. 로그에는 경로 문구나 위치가 들어갈 수 있으므로 공개 전에 개인정보를 가려 주세요.
+아래 표는 현재까지의 구현 및 실차 검증 현황입니다.
 
-## 개발
+**기본 TBT의 정상 동작과 모든 세부 기능의 정상 동작은 구분합니다.**
 
-[빌드 방법](BUILD.md), [변경 내역](CHANGELOG.md), [제3자 코드 고지](NOTICE.md)를 참고하세요. [AGPL-3.0](LICENSE).
+| 연결 방식 | 내비게이션 앱 | 기본 TBT | 주요 상태 |
+| --- | --- | --- | --- |
+| CarPlay | NAVER 지도 | ✅ 정상 | 현재·다음 안내 및 차선 데이터 처리 |
+| CarPlay | TMAP | ✅ 정상 | 일부 차선·특수 심볼 개선 필요 |
+| CarPlay | 카카오내비 | 🔧 구현 | v0.1.58 수정 사항 실차 재검증 필요 |
+| Android Auto | NAVER 지도 | ✅ 정상 | 잔여 거리·한글 안내·안내 종료 정상 |
+| Android Auto | TMAP | ✅ 정상 | 잔여 거리·한글 안내·안내 종료 정상 |
+| Android Auto | 카카오내비 | ⬜ 미검증 | 공통 수신 경로만 구현 |
+
+### Apple CarPlay
+
+NAVER 지도와 TMAP의 기본 TBT 동작이 실차에서 확인되었습니다.
+
+카카오내비도 현재·다음 안내 수신 및 변환 기능이 구현되어 있으며, v0.1.58에서 회전교차로 및 일부 다음 안내의 처리 방식을 개선했습니다.
+
+다만 카카오내비의 최신 수정 사항은 실차 재검증이 필요합니다.
+
+### Android Auto
+
+**NAVER 지도와 TMAP 양쪽에서 다음 기능의 정상 동작이 확인되었습니다.**
+
+- 기본 TBT 안내
+- 목적지 잔여 거리 표시
+- 한글 안내 문구 표시
+- 경로 안내 종료 및 계기판 상태 정리
+
+다음 안내 및 추천 차선 등의 세부 기능은 추가 검증이 필요합니다.
+
+Android Auto 카카오내비는 아직 앱별 실차 검증 결과가 없습니다.
+
+> [!NOTE]
+> 일부 기능의 과거 오류 기록은 최신 실차 시험 결과와 다를 수 있습니다. 위 표는 이후 확인된 동작 결과를 반영하며, 특정 차량에서의 검증이 모든 차종의 호환성을 보장하지는 않습니다.
+
+[앱 및 기능별 호환성 자세히 보기](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/wiki/Compatibility)
+
+---
+
+## 차량 호환성
+
+현재 다음 차량에서 동작이 확인되었습니다.
+
+| 차량 | AVN | 소프트웨어 | 검증 구분 |
+| --- | --- | --- | --- |
+| Hyundai Palisade LX2 PE (2023) | Gen5W | `LX2PE.KOR.0000.V039.001.260902` | 개발 차량 |
+| Kia Stinger Meister 3.3 (2023) | Gen5W S5W_M | `CK_PE_22.KOR.S5W_M.V039.001.260902` | 사용자 확인 |
+
+### Hyundai Palisade LX2 PE
+
+개발 및 실차 검증 기준 차량입니다.
+
+CarPlay NAVER 지도·TMAP 및 Android Auto NAVER 지도·TMAP의 주요 TBT 기능이 시험되었습니다.
+
+### Kia Stinger Meister 3.3
+
+외부 사용자 제보를 통해 다음 조합의 정상 동작이 확인되었습니다.
+
+- 유선 CarPlay + NAVER 지도: 계기판·HUD 정상
+- 무선 CarPlay + NAVER 지도: 계기판·HUD 정상
+- Phone Projection TBT v0.1.46 및 v0.1.58 동작 사례
+
+스팅어의 TMAP, 카카오내비 및 Android Auto는 아직 시험되지 않았습니다.
+
+> 설치 패키지는 차종·국가·펌웨어를 제한하지 않지만, 이는 모든 차량에 대한 호환성 보증이 아닙니다. 네이티브 수정은 확인된 라이브러리 빌드에서만 적용됩니다.
+
+[차량별 상세 호환성 보기](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/wiki/Compatibility)
+
+---
+
+## 설치 및 업데이트
+
+### 요구 사항
+
+- [HMG-API](https://github.com/VysseCodes/HMG-API) 1.0.2 이상
+- 차량에 적합한 HMG-API 맵
+- `Hooks on (map checked)` 상태
+- 정상 작동하는 CarPlay 또는 Android Auto 연결
+
+차량에 대한 HMG-API 맵이 없다면 `Map this car from its files` 기능으로 직접 생성할 수 있습니다.
+
+### 최초 설치
+
+1. HMG-API를 설치하고 차량 맵을 확인합니다.
+2. `Hooks on (map checked)` 상태를 확인합니다.
+3. NEMESIS에서 다음 최초 설치 패키지를 설치합니다.
+4. AVN을 재시작하고 TBT 기능을 확인합니다.
+
+**설치 파일**
+
+`phone-projection-tbt-0.1.58-nemesis-package.zip`
+
+### 기존 버전 업데이트
+
+다음 업데이트 ZIP을 압축 해제하지 않고 USB의 `HMGAPI/updates/` 경로에 복사합니다.
+
+`phone-projection-tbt-0.1.58.zip`
+
+이전 Phone Projection TBT 업데이트 ZIP이 있다면 제거합니다.
+
+정차 상태에서 HMG-API의 다음 기능을 실행합니다.
+
+1. `Check USB updates`
+2. `Apply changes`
+3. `Restart Unit`
+
+### 배포 파일
+
+| 파일 | 용도 |
+| --- | --- |
+| `phone-projection-tbt-0.1.58-nemesis-package.zip` | 최초 설치 |
+| `phone-projection-tbt-0.1.58.zip` | 기존 설치 업데이트 |
+| `phone-projection-tbt-0.1.58-source.zip` | 소스 코드 및 개발 자료 |
+
+[설치 및 업데이트 가이드](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/wiki/Installation)
+
+---
+
+## Phone Projection 모드와 함께 사용
+
+별도의 Phone Projection 모드와 함께 사용하는 경우 중복 TBT 출력을 방지해야 합니다.
+
+다음 기능을 비활성화하는 것을 권장합니다.
+
+`Turn-by-turn on the cluster and HUD`
+
+Phone Projection TBT에서 계기판 및 HUD 안내를 담당하도록 설정합니다.
+
+### 알려진 네이티브 패치 충돌
+
+Korea Projection과 Phone Projection TBT 사이에서 Android Auto 관련 네이티브 패치 충돌이 보고되었습니다.
+
+대상 라이브러리:
+
+`libautoreceiver_infobank.so`
+
+보고된 오류:
+
+```text
+aa-tbt-48ee793a: conflict with wired-carplay-tbt-lx2pe's aa-tbt-48ee793a
+```
+
+Korea Projection의 TBT 기능을 비활성화하는 것은 중복 출력을 방지하기 위한 설정이며, 네이티브 패치 충돌 자체를 해결하지는 않습니다.
+
+[알려진 문제 및 제한 사항](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/wiki/Known-Issues)
+
+---
+
+## 알려진 제한 사항
+
+현재 다음 기능은 개선 또는 추가 검증이 필요합니다.
+
+- **휴게소 단독 심볼:** 미해결. 코드 `183`은 진출로 도식으로 표시되며, `181`·`182`의 단독 심볼 출력은 확인되지 않았습니다.
+- **일부 특수 시설 심볼:** 요금소, 터널, 고가도로 및 지하차도 안내의 일부 표현이 제한됩니다.
+- **차선 안내:** 추천·주행 가능 방향의 일부 표시가 앱 데이터에 따라 제한될 수 있습니다.
+- **포켓 차선:** 최신 순정 차선 데이터와 차선 구성의 일치가 필요합니다.
+- **Android Auto 다음 안내:** 수신 경로는 구현되어 있으나 앱별 추가 검증이 필요합니다.
+- **Android Auto 추천 차선:** 실제 추천 정보 및 계기판 출력의 추가 검증이 필요합니다.
+- **CarPlay 카카오내비:** v0.1.58의 일부 최신 수정 사항은 실차 확인이 필요합니다.
+
+자세한 내용은 [Known Issues](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/wiki/Known-Issues)를 참고하세요.
+
+---
+
+## Documentation
+
+설치 방법, 차량 호환성, 기능 설명 및 문제 해결은 GitHub Wiki에서 확인할 수 있습니다.
+
+| 문서 | 내용 |
+| --- | --- |
+| [Home](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/wiki) | 프로젝트 소개 및 빠른 시작 |
+| [Installation](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/wiki/Installation) | 최초 설치 및 업데이트 |
+| [Compatibility](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/wiki/Compatibility) | 차량·AVN·앱 호환성 |
+| [Features](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/wiki/Features) | 기능 및 표시 방식 |
+| [Known Issues](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/wiki/Known-Issues) | 알려진 문제와 제한 사항 |
+| [Troubleshooting](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/wiki/Troubleshooting) | 오류 해결 |
+| [Logs and Issue Reporting](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/wiki/Logs-and-Issue-Reporting) | 로그 수집 및 오류 제보 |
+| [Development](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/wiki/Development) | 개발 구조 및 빌드 |
+
+---
+
+## 문제 신고 및 호환성 제보
+
+새로운 차종에서 정상 작동했거나 문제가 발생했다면 GitHub Issue를 작성해 주세요.
+
+[Create a New Issue](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/issues/new)
+
+권장 제목:
+
+`[국가 / 차종 코드 / AVN 펌웨어] 증상`
+
+가능하면 차량 정보, AVN 전체 버전, HMG-API 및 TBT 버전, 내비게이션 앱, 연결 방식, 재현 방법과 발생 시각을 포함해 주세요.
+
+**개인정보 주의:** TBT 로그에는 도로명, 목적지, 주소, 위치 좌표 및 이동 경로가 포함될 수 있습니다. 공개 전에 개인의 위치를 식별할 수 있는 정보를 반드시 마스킹해 주세요.
+
+[로그 수집 및 제보 방법](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/wiki/Logs-and-Issue-Reporting)
+
+---
+
+## Development
+
+이 프로젝트는 HMG-API의 훅 및 계기판 인터페이스를 사용합니다.
+
+공개 v0.1.58 릴리스에는 소스 코드와 호스트 회귀 검사 자료가 포함되어 있습니다.
+
+**개발 시 주의:** 현재 `main` 브랜치의 `mod.json`은 0.1.46을 기록하고 있으므로, 최신 v0.1.58 구현을 확인하려면 해당 릴리스의 소스 아카이브를 기준으로 확인해 주세요.
+
+- [Build Instructions](BUILD.md)
+- [Changelog](CHANGELOG.md)
+- [Release v0.1.58](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/releases/tag/v0.1.58)
+- [Development Wiki](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/wiki/Development)
+
+**License:** [GNU AGPL-3.0](LICENSE)
+
+---
+
+*HMG Phone Projection TBT is an unofficial community project and is not affiliated with or endorsed by Hyundai Motor Company, Kia, or Genesis.*
