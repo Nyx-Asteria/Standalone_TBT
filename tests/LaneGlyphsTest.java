@@ -11,6 +11,18 @@ public final class LaneGlyphsTest {
         check(Arrays.equals(wanted, actual), Arrays.toString(actual) + " != " + Arrays.toString(wanted));
     }
     public static void main(String[] args) {
+        expect(2, null, new int[]{-45}, 2,8,0,0,1,1);
+        expect(1, null, new int[]{90}, 1,3,0,0,1,0);
+        expect(0, null, new int[]{90}, 0,0,0,0,0,0);
+        // TMAP 2026-11-14 08:05:44/08:06:02: selected straight is absent
+        // from the general list. Keep the gray branch and selected straight.
+        expect(2, new int[]{-90}, new int[]{0}, 14,9,12,0,1,1);
+        expect(2, new int[]{90}, new int[]{0}, 14,16,18,0,1,1);
+        expect(1, new int[]{-90}, new int[]{0}, 13,9,12,0,1,0);
+        expect(1, new int[]{90}, new int[]{0}, 13,16,18,0,1,0);
+        expect(2, new int[]{0}, new int[]{90}, 11,16,18,0,1,1);
+        // Duplicate directions across the two lists do not add arrow parts.
+        expect(2, new int[]{0,90}, new int[]{0,0}, 14,16,18,0,1,1);
         // Actual photographed input: unavailable straight/left, usable right.
         expect(0, new int[]{0,-90}, null, 15,9,12,0,0,0);
         expect(1, new int[]{90}, new int[]{90}, 1,3,0,0,1,0);

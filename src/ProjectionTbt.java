@@ -15,6 +15,13 @@ import java.lang.reflect.Modifier;
 import hmgapi.mods.projection.carplay.StockLaneHints;
 
 public final class ProjectionTbt extends ModEntry {
+    @Override public void zygoteInit(ModContext mod) {
+        StockGraphNative.prepare(mod);
+    }
+    @Override public void onSettingsChanged(ModContext mod) {
+        hmgapi.mods.projection.carplay.Dipo.mapSettingsChanged(mod);
+    }
+    private ProjectionTrapBar trapGauge;
     private byte[] stockLaneFrame;
     private long stockLaneFrameAt, stockLaneDistanceAt, stockLanePublishedAt;
     private int stockLaneDistance = -1;
@@ -95,19 +102,23 @@ public final class ProjectionTbt extends ModEntry {
                     private boolean suppressionLogged;
                     private boolean leaseReadFailed;
                     private boolean roadTraceFailed;
+                    private String lastJunction;
 
                     @Override
                     protected void beforeHookedMethod(Param p) {
+                        if(ProjectionTrapBar.REPLAYING.get()!=null&&name.equals("updateTPCrossroadName"))return;
+                        if(trapGauge!=null&&name.equals("updateTBTInfo"))trapGauge.check(ProjectionBar.guiding(app.context));
                         boolean emptyTurn = name.equals("updateTBTInfo") && arity == 9
                                 && Integer.valueOf(8).equals(p.args[0]);
                         boolean emptyTrip = trip && arity == 10 && Float.valueOf(0f).equals(p.args[0])
                                 && Integer.valueOf(-3).equals(p.args[1])
                                 && Integer.valueOf(15).equals(p.args[2]);
                         boolean lane = name.equals("updateLaneInfo") && arity == 1;
-                        if (!emptyTurn && !emptyTrip && !lane) return;
-                        String lease = lane ? LANE_LEASE : emptyTurn ? "hmgapi_lx2pe_carplay_turn_until"
+                        boolean roadName=name.equals("updateTPCrossroadName")&&arity==1;
+                        if (!emptyTurn && !emptyTrip && !lane && !roadName) return;
+                        String lease = lane ? LANE_LEASE : (emptyTurn||roadName) ? "hmgapi_lx2pe_carplay_turn_until"
                                 : "hmgapi_lx2pe_carplay_distance_until";
-                        long limit = lane ? LANE_LEASE_MS : emptyTurn ? 2500 : 5000;
+                        long limit = lane ? LANE_LEASE_MS : (emptyTurn||roadName) ? 2500 : 5000;
                         try {
                             long remaining = Settings.Global.getLong(app.context.getContentResolver(),
                                     lease, 0) - System.currentTimeMillis();
@@ -142,7 +153,7 @@ public final class ProjectionTbt extends ModEntry {
                             try {
                                 String road = (String) Points.field(null, "framework.crossroad_name.name").get(p.args[0]);
                                 if (road != null) {
-                                    detail = " underpassText=" + road.contains("지하차도")
+                                    detail = " road=" + road + " underpassText=" + road.contains("지하차도")
                                             + " overpassText=" + road.contains("고가차도")
                                             + " restText=" + (road.contains("휴게소") || road.contains("졸음쉼터"))
                                             + " tollText=" + (road.contains("요금소") || road.contains("톨게이트"));
@@ -151,12 +162,32 @@ public final class ProjectionTbt extends ModEntry {
                                 if (!roadTraceFailed) mod.error("Native crossroad trace", e);
                                 roadTraceFailed = true;
                             }
-                        } else if ((name.equals("updateTBTInfo") || !name.startsWith("update"))
+                        } else if (name.equals("updateTBTInfo") && arity == 9) {
+                            detail = " args=" + java.util.Arrays.toString(p.args);
+                            if (mod.settingBoolean("junction_trial", true) && p.getThrowable() == null) {
+                                try {
+                                    StringBuilder frame = new StringBuilder().append(android.os.SystemClock.elapsedRealtime());
+                                    for (Object arg : p.args) frame.append(',').append(arg);
+                                    Settings.Global.putString(app.context.getContentResolver(),
+                                            hmgapi.mods.projection.carplay.JunctionHints.KEY, frame.toString());
+                                } catch (RuntimeException error) { /* Optional trial must not affect stock navigation. */ }
+                            }
+                        } else if ((!name.startsWith("update"))
                                 && p.args.length > 0
                                 && (p.args[0] instanceof Number || p.args[0] instanceof Boolean)) {
                             detail = " first=" + p.args[0];
                         }
                         String result = detail + " completed=" + (p.getThrowable() == null);
+                        if (mod.settingBoolean("junction_capture", true)
+                                && (name.equals("updateTBTInfo") || name.equals("updateTPCrossroadName"))) {
+                            String capture = guidanceSnapshot(p.args);
+                            if (!capture.equals(lastJunction)) {
+                                lastJunction = capture;
+                                mod.log("Junction capture api elapsed=" + android.os.SystemClock.elapsedRealtime()
+                                        + " method=" + name + " args=" + capture
+                                        + " completed=" + (p.getThrowable() == null));
+                            }
+                        }
                         long now = android.os.SystemClock.elapsedRealtime();
                         if (result.equals(previous) && now - lastLogged < (trip ? 2500 : 10000)) return;
                         previous = result;
@@ -168,6 +199,88 @@ public final class ProjectionTbt extends ModEntry {
             } catch (RuntimeException e) {
                 mod.error("Native display trace unavailable " + name, e);
             }
+        }
+    }
+
+    /** Captures the nine arguments at the Binder proxy after public API validation. */
+    private void observeTbtTransport(final ModContext mod, final LoadedApp app) {
+        final String boot=ClusterTheme.boot();
+        final boolean stock="com.mnsoft.navi".equals(app.packageName);
+        final ProjectionBar.Sender gaugeSender=new ProjectionBar.Sender();
+        try{
+            Class<?> proxy=Hooks.findClass("com.hkmc.cluster.IClusterService$Stub$Proxy",app.classLoader);
+            for(Method method:proxy.getDeclaredMethods())if(method.getName().equals("updateNavigationTBTTrapInfo")
+                    ||method.getName().equals("updateNavigationTBTTrapInfoNew")||method.getName().equals("updateNavigationTBTSubInfo")){
+                final String channel=method.getName();
+                Bridge.hookMethod(method,new MethodHook(){
+                    @Override protected void afterHookedMethod(Param p){
+                        try{
+                            Object[] args=p.args;
+                            if(args!=null&&args.length==1&&args[0]!=null){
+                                StringBuilder fields=new StringBuilder();
+                                java.lang.reflect.Field[] fs=args[0].getClass().getFields();
+                                java.util.Arrays.sort(fs,new java.util.Comparator<java.lang.reflect.Field>(){public int compare(java.lang.reflect.Field a,java.lang.reflect.Field b){return a.getName().compareTo(b.getName());}});
+                                for(java.lang.reflect.Field f:fs)if(f.getType()==int.class&&!Modifier.isStatic(f.getModifiers()))fields.append(f.getName()).append('=').append(f.getInt(args[0])).append(';');
+                                args=new Object[]{fields.toString(),p.getThrowable()==null};
+                            }
+                            AaInputTrace.record(app.context,channel,args);
+                        }catch(Exception ignored){}
+                    }
+                });
+            }
+        }catch(RuntimeException error){mod.error("Final navigation presentation trace unavailable",error);}
+        try {
+            Hooks.findAndHookMethod("com.hkmc.cluster.IClusterService$Stub$Proxy", app.classLoader,
+                    "updateNavigationThemeData_01",int.class,int.class,int.class,int.class,int.class,int.class,new MethodHook(){
+                @Override protected void afterHookedMethod(Param p){
+                    AaInputTrace.record(app.context,"theme",p.args);
+                    if(stock&&p.getThrowable()==null){
+                        String value=ClusterTheme.encode(boot,p.args);
+                        if(value!=null)try{Settings.Global.putString(app.context.getContentResolver(),ClusterTheme.KEY,value);}
+                        catch(RuntimeException error){mod.error("Factory theme capture",error);}
+                    }
+                }
+            });
+        }catch(Exception error){mod.error("Factory theme trace unavailable",error);}
+        try {
+            Class<?> cn=Hooks.findClass("com.hkmc.cluster.NavigationCluster$CrossroadName",app.classLoader);
+            final java.lang.reflect.Field nameField=cn.getField("name");
+            Hooks.findAndHookMethod("com.hkmc.cluster.IClusterService$Stub$Proxy",app.classLoader,
+                "updateTPCrossroadName",cn,new MethodHook(){
+                    @Override protected void afterHookedMethod(Param p){
+                        try{
+                            String value=p.args[0]==null?null:(String)nameField.get(p.args[0]);
+                            AaInputTrace.record(app.context,"crossroad_name",new Object[]{value,p.getThrowable()==null});
+                            if(!stock&&p.getThrowable()==null){gaugeSender.name(value);
+                                if(gaugeSender.toll()==1)ProjectionBar.send(app.context,gaugeSender,gaugeSender.level(),1,android.os.SystemClock.elapsedRealtime());}
+                        }
+                        catch(Exception ignored){}
+                    }
+                });
+        }catch(Exception error){mod.error("Crossroad name trace unavailable",error);}
+        try {
+            Hooks.findAndHookMethod("com.hkmc.cluster.IClusterService$Stub$Proxy", app.classLoader,
+                    "updateNavigationTBTInfo", int.class, int.class, float.class, float.class,
+                    int.class, int.class, int.class, int.class, int.class, new MethodHook() {
+                @Override
+                protected void beforeHookedMethod(Param p) {
+                    mod.log("TBT transport app=" + app.packageName
+                            + " args=" + java.util.Arrays.toString(p.args));
+                }
+                @Override
+                protected void afterHookedMethod(Param p) {
+                    AaInputTrace.output(app.context,p.args,p.getThrowable());
+                    if(!stock&&p.getThrowable()==null){
+                        int level=ProjectionBar.fromTbt(p.args);
+                        if(ProjectionBar.send(app.context,gaugeSender,level,ProjectionBar.tollFromTbt(p.args),android.os.SystemClock.elapsedRealtime()))
+                            AaInputTrace.record(app.context,"gauge_publish",new Object[]{level});
+                    }
+                    if (p.getThrowable() != null) mod.error("TBT transport", p.getThrowable());
+                }
+            });
+            mod.log("TBT transport trace ready app=" + app.packageName);
+        } catch (Exception error) {
+            mod.error("TBT transport trace unavailable", error);
         }
     }
 
@@ -199,7 +312,10 @@ public final class ProjectionTbt extends ModEntry {
                         int type = (Integer) p.args[parser ? 1 : 0];
                         long now = android.os.SystemClock.elapsedRealtime();
                         Long last = sampled.get(type);
-                        if (last != null && now - last < 500) return;
+                        // Keep transition detail near a junction without polling the navigation engine.
+                        boolean junction = mod.settingBoolean("junction_capture", true)
+                                && (type == 0 || type == 1 || type == 2 || type == 6118);
+                        if (last != null && now - last < (junction ? 100 : 500)) return;
                         String value = guidanceSnapshot(p.args);
                         if (value.equals(previous.get(type))) return;
                         if (previous.size() >= 128 && !previous.containsKey(type)) {
@@ -209,6 +325,8 @@ public final class ProjectionTbt extends ModEntry {
                         previous.put(type, value);
                         sampled.put(type, now);
                         mod.log("Stock guidance " + name + " type=" + type + " args=" + value);
+                        if (junction) mod.log("Junction capture stock elapsed=" + now
+                                + " method=" + name + " type=" + type + " args=" + value);
                     }
                 });
                 mod.log("Stock guidance capture ready " + name);
@@ -269,11 +387,23 @@ public final class ProjectionTbt extends ModEntry {
 
     @Override
     public void appLoaded(final ModContext mod, final LoadedApp app) {
+        if ("com.mnsoft.navi".equals(app.packageName)
+                || "com.daudio.app.dipo".equals(app.packageName)
+                || "com.google.android.projection.sink".equals(app.packageName)) {
+            observeTbtTransport(mod, app);
+        }
+        if ("com.google.android.projection.sink".equals(app.packageName)
+                && mod.settingBoolean("android_auto_tbt", true)) {
+            AndroidAuto.install(mod, app);
+        }
         if ("com.mnsoft.navi".equals(app.packageName) || "com.daudio.app.dipo".equals(app.packageName)) {
             observeStatus(mod, app, "updateOperationStatus", int.class);
             observeStatus(mod, app, "responseNaviAliveStatus", boolean.class);
         }
         if ("com.mnsoft.navi".equals(app.packageName)) {
+            mod.log("Phone Projection TBT runtime=1.0.0 stock-process entry");
+            trapGauge=ProjectionTrapBar.install(mod,app);
+            StockNavigationApi.install(mod, app);
             observeNativeDisplay(mod, app);
             observeStockGuidance(mod, app);
         }

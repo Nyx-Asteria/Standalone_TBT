@@ -2,12 +2,46 @@
   "version": 1,
   "settings": [
     {
-      "key": "cluster_status_trial",
+      "key": "android_auto_tbt",
       "type": "toggle",
-      "default": false,
+      "default": true,
       "apply": "restart",
-      "title": "Legacy cluster status trial",
-      "description": "Send the original DiPO cluster start and stop status during valid CarPlay route guidance. Turn off and restart if factory navigation does not return."
+      "title": "Android Auto 길안내",
+      "description": "Android Auto의 길안내를 계기판에 표시합니다. 다른 모드의 TBT 기능과 동시에 켜지 마세요."
+    },
+    {
+      "key": "stock_map_junction",
+      "type": "toggle",
+      "default": true,
+      "apply": "restart",
+      "title": "CarPlay / Android Auto 확대 안내 · 시험",
+      "description": "앱 제한 없이 확대 안내를 사용합니다. 순정 도로 형상과 폰의 방향·거리가 맞는 경우 표시합니다. 회전교차로는 수신된 진출 각도를 사용합니다. 정보가 부족하면 일반 TBT를 유지합니다."
+    },
+    {
+      "key": "phone_junction_distance",
+      "type": "choice",
+      "default": "road",
+      "apply": "restart",
+      "title": "확대 안내 시작 거리",
+      "description": "일반 도로·고속도로 진출입 기준 또는 속도별 기준을 선택합니다. 도로 형상을 확인하지 못한 구간에서는 일반 TBT를 표시합니다.",
+      "options": [
+        {
+          "value": "road",
+          "title": "일반400m / 고속도로 진출입1050m"
+        },
+        {
+          "value": "speed",
+          "title": "속도별100 / 400 / 500m"
+        }
+      ]
+    },
+    {
+      "key": "toll_enlargement",
+      "type": "toggle",
+      "default": true,
+      "apply": "restart",
+      "title": "요금소 접근 표시 · 시험",
+      "description": "요금소로 식별된 안내가 1km 미만이면 순정 요금소 표시 상태와 거리 막대 값을 함께 보냅니다. 앱이 요금소 정보를 보내지 않으면 식별하지 못할 수 있습니다."
     }
   ]
 }

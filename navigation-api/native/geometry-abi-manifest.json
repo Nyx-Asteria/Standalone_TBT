@@ -1,0 +1,69 @@
+{
+  "engine_sha256": "de162d7015504906105037ae306d1514655791bc04d5e8a5caed10ff476b73b3",
+  "symbols": {
+    "_ZN11CEntityLink11GetPositionEP6mArrayI9mLonLat_tIiEE": [
+      41140861,
+      20,
+      1
+    ],
+    "_ZN11CEntityLink9GetLengthEv": [
+      41140781,
+      20,
+      1
+    ],
+    "_ZN6mArrayI9mLonLat_tIiEE5clearEv": [
+      35731681,
+      52,
+      2
+    ]
+  },
+  "point_stride": 8,
+  "output_row_words": 13,
+  "max_roads": 9,
+  "max_points": 4096,
+  "vehicle_validation": "pending",
+  "physical_node_symbols": {
+    "_ZN11CEntityLink9GetNodeIdEb": [
+      41140621,
+      20,
+      1
+    ],
+    "_ZN11CEntityNodeC2ERK16mEntityAllocator": [
+      41150357,
+      36,
+      1
+    ],
+    "_ZN11CEntityNodeD2Ev": [
+      41150265,
+      72,
+      1
+    ],
+    "_ZN11CEntityNode10InitializeEyyjt": [
+      41150393,
+      444,
+      1
+    ],
+    "_ZN11CEntityNode13GetAttrAdjestEv": [
+      41148789,
+      18,
+      1
+    ],
+    "_ZN11CEntityNode12GetLinkCountEv": [
+      41149481,
+      20,
+      1
+    ],
+    "_ZN11CEntityNode11GetConMapIdEv": [
+      41149699,
+      20,
+      1
+    ],
+    "_ZN11CEntityNode12GetConLinkIdEi": [
+      41149719,
+      20,
+      1
+    ]
+  },
+  "geometry_protocol": 2,
+  "target_protocol": 3
+}

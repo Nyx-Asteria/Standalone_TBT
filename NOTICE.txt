@@ -1,0 +1,8 @@
+PhoneJunction road-angle sector algorithm adapted from BeegSchmooze/Lambda-Carplay-AA-Bridge LeafiaCpTurn.java, GPL-3.0.
+https://github.com/BeegSchmooze/Lambda-Carplay-AA-Bridge
+Combined project distributed under AGPL-3.0.
+
+ProjectionBar, ProjectionTrapBar and TrapArgs adapted from StopDragon/HMG-API PhoneBar/TrapBar/TrapArgs at 6b7211051f9d5edddf1b627fc92d71719bb6aa98, AGPL-3.0.
+https://github.com/StopDragon/HMG-API/tree/6b7211051f9d5edddf1b627fc92d71719bb6aa98/mods/wireless-carplay-aa/src/hmgapi/mods/wireless
+
+AA Korean ramp selectors and same-maneuver text update behavior compared against StopDragon/HMG-API korea-build AaTurns.java (AGPL-3.0), inspected 2026-11-17.

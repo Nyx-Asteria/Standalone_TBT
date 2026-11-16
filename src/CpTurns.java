@@ -48,6 +48,27 @@ final class CpTurns {
     /** component id -> maneuver index -> maneuver (DiPO e/u.Am) */
     final LinkedHashMap<Integer, LinkedHashMap<Integer, Maneuver>> maneuvers = new LinkedHashMap<Integer, LinkedHashMap<Integer, Maneuver>>();
     String source;
+    final JunctionSpeed junctionSpeed = new JunctionSpeed();
+    String lastJunctionTrial;
+    boolean enlargementLinkageFailed;
+    private final TollDisplay tollDisplay=new TollDisplay();
+    private final FacilityContext facilityContext=new FacilityContext();
+    private final JunctionTarget junctionTarget=new JunctionTarget();
+    final MapJunctionDisplay mapDisplay=new MapJunctionDisplay();
+    long lastMapRequest;
+    float mapRequestedMeters;
+    int mapRequestedId,lastPublishedTarget;
+    boolean mapLeaseLive, mapTickQueued, mapTickRunning;
+    long lastPhoneTurnAt;
+    private final Runnable refreshMap=new Runnable(){public void run(){
+        mapTickQueued=false;
+        if(!mapLeaseLive || !showingGuidance || SystemClock.elapsedRealtime()-lastPhoneTurnAt>10000) {
+            requestMap(false);return;
+        }
+        mapTickRunning=true;
+        try {for(Integer id:new java.util.ArrayList<Integer>(updates.keySet()))turn(id,updates.get(id));}
+        finally {mapTickRunning=false;}
+    }};
     /** last HUD list sent (type, next, road), so an unchanged one isn't resent */
     int hudType, hudNext;
     String hudRoad;
@@ -172,9 +193,26 @@ final class CpTurns {
 
     /** Naver sends contiguous maneuver IDs in each route snapshot. */
     private int adjacentNext(Update u) {
-        if (!"네이버지도".equals(source) || u.state != 1 || u.list.length != 1) return -1;
-        int next = u.list[0] + 1;
-        return next > 0 && next < u.listCountAtSelection ? next : -1;
+        return adjacentIndex(source, u.state, u.list, u.listCountAtSelection);
+    }
+
+    static int adjacentIndex(String source, int state, int[] list, int count) {
+        // SourceName can arrive only when the first route ends. Do not block a
+        // received adjacent maneuver solely because that optional name is absent.
+        if (source != null && !source.isEmpty()
+                && !"네이버지도".equals(source) && !"TMAP".equals(source)
+                && !"카카오내비".equals(source)) return -1;
+        if (state != 1 || list == null || list.length != 1 || list[0] < 0) return -1;
+        int next = list[0] + 1;
+        return next > 0 && next < count ? next : -1;
+    }
+
+    static int startupMeters(Update route, Maneuver current) {
+        if (route.hasNextDistance && route.distNext >= 0) return route.distNext;
+        // The maneuver packet carries its own explicit distance before the
+        // route-level countdown arrives. An absent field must never become 0 m.
+        if (current.hasDistance && current.distance >= 0) return current.distance;
+        return -1;
     }
 
     private static final class LaneFrame {
@@ -303,13 +341,6 @@ final class CpTurns {
                 + " statuses=" + java.util.Arrays.toString(java.util.Arrays.copyOf(status, n)));
         if (laneIndex < 0) return;
         int component = components[0];
-        if (passable == 0) {
-            if (activeLanes != null && activeLanes.component == component
-                    && activeLanes.index == laneIndex) clearLaneDisplay();
-            if (pendingLanes != null && pendingLanes.component == component
-                    && pendingLanes.index == laneIndex) pendingLanes = null;
-            return;
-        }
         pendingLanes = new LaneFrame(component, laneIndex, f);
         updateLaneDisplay(component, updates.get(component));
     }
@@ -373,48 +404,6 @@ final class CpTurns {
         return LaneGlyphs.angleIcon(angle);
     }
 
-    private Object legacyCluster;
-    private Method legacyAlive, legacyOperation;
-    private boolean legacyActive, legacyUnavailable;
-
-    private void startLegacyStatus() {
-        if (legacyActive || legacyUnavailable || !Dipo.mod.settingBoolean("cluster_status_trial", false)) return;
-        try {
-            legacyCluster = Points.newInstance(null, "framework.navigation_cluster.new", context);
-            legacyAlive = legacyCluster.getClass().getMethod("responseNaviAliveStatus", boolean.class);
-            legacyOperation = legacyCluster.getClass().getMethod("updateOperationStatus", int.class);
-            legacyActive = true;
-            legacyAlive.invoke(legacyCluster, true);
-            legacyOperation.invoke(legacyCluster, 1);
-            Dipo.log("CarPlay: legacy cluster status started");
-        } catch (Exception e) {
-            Dipo.error("CarPlay: legacy cluster start", e);
-            stopLegacyStatus();
-            legacyUnavailable = true;
-        }
-    }
-
-    private void stopLegacyStatus() {
-        if (!legacyActive) return;
-        boolean restored = true;
-        try {
-            legacyAlive.invoke(legacyCluster, false);
-        } catch (Exception e) {
-            restored = false;
-            Dipo.error("CarPlay: legacy cluster alive stop", e);
-        }
-        try {
-            legacyOperation.invoke(legacyCluster, 0);
-        } catch (Exception e) {
-            restored = false;
-            Dipo.error("CarPlay: legacy cluster operation stop", e);
-        }
-        if (restored) {
-            legacyActive = false;
-            Dipo.log("CarPlay: legacy cluster status stopped");
-        }
-    }
-
     // Route setup/recalculation can briefly report inactive before the next active frame.
     private boolean showingGuidance;
     private String lastTurnTrace;
@@ -426,6 +415,37 @@ final class CpTurns {
         }
     };
 
+    final CpSubscriptionRecovery subscriptionRecovery=new CpSubscriptionRecovery();
+    private final Runnable resumeSubscription=new Runnable(){public void run(){
+        if(subscriptionRecovery.resume(SystemClock.elapsedRealtime()))Dipo.resumeRouteGuidance();
+    }};
+    private final Runnable expireSubscription=new Runnable(){public void run(){
+        long now=SystemClock.elapsedRealtime();
+        if(subscriptionRecovery.expired(now))stop("subscription recovery timed out without fresh guidance");
+        else if(subscriptionRecovery.pending()){
+            setTurnLease(System.currentTimeMillis()+2500);
+            Dipo.turnsHandler.postDelayed(this,Math.min(1000,subscriptionRecovery.remaining(now)));
+        }
+    }};
+    private void cancelSubscriptionRecovery(){
+        subscriptionRecovery.clear();
+        Dipo.turnsHandler.removeCallbacks(resumeSubscription);
+        Dipo.turnsHandler.removeCallbacks(expireSubscription);
+    }
+    void subscriptionStopped(){
+        long now=SystemClock.elapsedRealtime();
+        if(!subscriptionRecovery.begin(now,showingGuidance,lastPhoneTurnAt)){
+            stop("subscription stopped without fresh route");return;
+        }
+        Dipo.log("CarPlay: subscription stopped; retaining recent route for bounded recovery");
+        Dipo.turnsHandler.removeCallbacks(resumeSubscription);
+        Dipo.turnsHandler.postDelayed(resumeSubscription,250);
+        // Do not extend the first deadline if unsubscribe callbacks repeat.
+        Dipo.turnsHandler.removeCallbacks(expireSubscription);
+        setTurnLease(System.currentTimeMillis()+2500);
+        Dipo.turnsHandler.postDelayed(expireSubscription,Math.min(1000,subscriptionRecovery.remaining(now)));
+    }
+
     /** The iAP2 session ended. */
     void disconnected() {
         stop("iAP2 disconnected");
@@ -433,6 +453,11 @@ final class CpTurns {
     }
 
     void stop(String reason) {
+        Dipo.log("CarPlay: route stop reason="+reason);
+        cancelSubscriptionRecovery();
+        tollDisplay.clear();facilityContext.clear();junctionTarget.clear();mapDisplay.clear();
+        requestMap(false);
+        Dipo.turnsHandler.removeCallbacks(refreshMap);mapTickQueued=false;
         Dipo.turnsHandler.removeCallbacks(clearInactiveRoute);
         pendingLanes = null;
         clearLaneDisplay();
@@ -447,7 +472,6 @@ final class CpTurns {
         tripRefreshLogged = false;
         lastTurnTrace = null;
         Dipo.turnsHandler.removeCallbacks(refreshTrip);
-        stopLegacyStatus();
         reset();
         if (!showingGuidance) return;
         showingGuidance = false;
@@ -467,6 +491,31 @@ final class CpTurns {
         for (Update u : updates.values()) {
             if (u != null) u.clear();
         }
+    }
+
+    void mapSettingsChanged() {
+        mapDisplay.clear();lastJunctionTrial=null;requestMap(false);
+        for(Integer id:new java.util.ArrayList<Integer>(updates.keySet()))turn(id,updates.get(id));
+    }
+    private int mapRequestedKind;
+    private void requestMap(boolean wanted) {
+        long now=SystemClock.elapsedRealtime();
+        if(!wanted && !mapLeaseLive)return;
+        if(wanted && mapLeaseLive && mapRequestedId==lastPublishedTarget && now-lastMapRequest<1000) {
+            if(!mapTickQueued){mapTickQueued=true;Dipo.turnsHandler.postDelayed(refreshMap,1000);}
+            return;
+        }
+        try {
+            Settings.Global.putString(context.getContentResolver(),StockMapJunction.DETAILS,
+                    wanted?now+","+mapRequestedMeters+","+mapRequestedId+","+mapRequestedKind:null);
+            Settings.Global.putLong(context.getContentResolver(),StockMapJunction.REQUEST,wanted?now+5000:0);
+            lastPublishedTarget=mapRequestedId;
+            mapLeaseLive=wanted;lastMapRequest=now;
+            if(wanted && !mapTickQueued) {
+                mapTickQueued=true;Dipo.turnsHandler.postDelayed(refreshMap,1000);
+            }
+            if(!wanted){Dipo.turnsHandler.removeCallbacks(refreshMap);mapTickQueued=false;}
+        } catch(RuntimeException ignored) { /* Optional map refresh cannot stop phone guidance. */ }
     }
 
     /** SourceName (item 19) changed: clear the old app's leftovers and have the phone resend */
@@ -509,6 +558,7 @@ final class CpTurns {
             return;
         }
         if (u.state == 0) {
+            cancelSubscriptionRecovery();
             outputState("inactive component=" + id + " state=" + u.state +
                     " turnCount=" + (u.list == null ? 0 : u.list.length));
             Dipo.turnsHandler.removeCallbacks(clearInactiveRoute);
@@ -517,13 +567,13 @@ final class CpTurns {
         }
         Dipo.turnsHandler.removeCallbacks(clearInactiveRoute);
         int[] list = u.list == null ? null : u.list.clone();
-        float dist = 0f;
+        float dist = Float.NaN;
         if (u.nextStr != null && !u.nextStr.equals("")) {
             try {
                 dist = Float.parseFloat(u.nextStr);
-                if (Float.isNaN(dist) || Float.isInfinite(dist)) dist = 0f;
+                if (Float.isNaN(dist) || Float.isInfinite(dist) || dist < 0f) dist = Float.NaN;
             } catch (NumberFormatException e) {
-                dist = 0f;
+                dist = Float.NaN;
             }
         }
         showingGuidance = true;
@@ -539,7 +589,6 @@ final class CpTurns {
             outputState("waiting for maneuver");
             return;
         }
-        startLegacyStatus();
         int unit;
         switch (u.nextUnits) {
             case 0: unit = Cluster.UNIT_KM; break;
@@ -548,7 +597,19 @@ final class CpTurns {
             case 4: unit = Cluster.UNIT_FT; break;
             default: unit = Cluster.UNIT_M; break;
         }
+        if (Float.isNaN(dist)) {
+            int meters = startupMeters(u, x);
+            if (meters < 0) {
+                outputState("waiting for current maneuver distance");
+                return;
+            }
+            dist = meters;
+            unit = Cluster.UNIT_M;
+        }
         int icon = maneuverIcon(x, u.state);
+        String facilityHint=facilityContext.resolve(x.type,x.junction,x.exit,x.description,x.afterRoad,JunctionHints.meters(dist,unit),SystemClock.elapsedRealtime());
+        int facilityOverride=FacilityGlyphs.road(x.type,x.junction,x.exit,facilityHint,null);
+        if(facilityOverride!=0)icon=facilityOverride;
         int adjacent = adjacentNext(u);
         if (adjacent >= 0 && x.type != 10 && x.type != 12 && x.type != 27 && m.containsKey(adjacent)) {
             list = new int[] { list[0], adjacent };
@@ -560,10 +621,10 @@ final class CpTurns {
                 + x.facilityTrace() + " next=" + (next == null ? "missing"
                         : next.type + "/" + next.exit + "/" + next.distance + next.facilityTrace());
         if (!trace.equals(lastTurnTrace)) {
-            Dipo.log("CarPlay 0.1.46 turn " + trace);
+            Dipo.log("CarPlay 1.0.0 turn " + trace);
             lastTurnTrace = trace;
         }
-        cluster.crossroadName(x.displayRoad());
+        // Publish the name after the display frame below; some clusters gate names by display type.
         if (icon == 0) {
             outputState("no icon for maneuver type " + x.type + " junction=" + x.junction
                     + " side=" + x.side + " exit=" + x.exit);
@@ -571,22 +632,107 @@ final class CpTurns {
         }
         outputState("sending turn to NavigationCluster");
         setTurnLease(System.currentTimeMillis() + 2500);
-        cluster.tbtInfo(icon, 0, 0f, dist, 0, 0, unit, 0, 0);
+        if(!mapTickRunning){lastPhoneTurnAt=SystemClock.elapsedRealtime();cancelSubscriptionRecovery();}
+        String junctionApp=source;
+        if(junctionApp==null || junctionApp.isEmpty())junctionApp="CarPlay";
+        boolean supported=StockMapJunction.allowedApp(junctionApp);
+        float phoneMeters=JunctionHints.meters(dist,unit);
+        boolean mapEnabled=!enlargementLinkageFailed && Dipo.mod.settingBoolean("stock_map_junction",true);
+        String mapTurnToken=junctionTarget.select(junctionApp+"/"+id+"/"+x.type+"/"+x.junction+"/"+x.side+"/"+x.hasExit+"/"+x.exit,SystemClock.elapsedRealtime(),phoneMeters);
+        mapRequestedKind=(x.junction==1||x.type==6||x.type==7)&&x.side==0?1:0;
+        mapRequestedMeters=phoneMeters;mapRequestedId=StockMapJunction.targetId(mapTurnToken);
+        requestMap(mapEnabled && StockMapJunction.requestedRange(junctionApp,phoneMeters,PhoneJunction.roadThreshold(x.type)));
+        float[] enlarged = mapEnabled && supported && Dipo.mod.settingBoolean("toll_enlargement",true)
+                ? tollDisplay.draw(icon,phoneMeters,SystemClock.elapsedRealtime()):null;
+        if(icon!=178&&icon!=184)tollDisplay.clear();
+        String mapState=enlarged!=null?"toll": "none";
+        String mapReason="not-requested";
+        try {
+        if (mapEnabled) {
+            // Source name is diagnostic only; every projection app uses the same validation.
+            String app = junctionApp;
+            boolean allowed = supported;
+            boolean stockDistance = "road".equals(Dipo.mod.settingString("phone_junction_distance", "road"));
+            float speed = allowed && !stockDistance ? junctionSpeed.read() : Float.NaN;
+            int limit = stockDistance ? PhoneJunction.roadThreshold(x.type) : JunctionHints.threshold(speed);
+            float meters = JunctionHints.meters(dist, unit);
+            if(enlarged==null){enlarged=RampEnlargement.draw(x.type,x.junction,x.hasExit,x.exit,meters,limit);
+                if(enlarged!=null){mapDisplay.clear();mapState="factory-exit";mapReason="phone-exit-kind-and-side";}}
+            if(enlarged==null) {
+                enlarged=GradeEnlargement.draw(icon,meters,limit);
+                if(enlarged!=null){mapDisplay.clear();mapState="factory-grade";mapReason="phone-facility-text";}
+            }
+            if(enlarged==null && mapEnabled && allowed && ((icon>=65 && icon<=71)||(icon>=160 && icon<=165)||mapRequestedKind==1)
+                    && !FacilityGlyphs.grade(String.valueOf(x.description)+" "+String.valueOf(x.afterRoad))) {
+                try {
+                    hmgapi.mods.projection.StockNavigationApi.Position position=
+                            hmgapi.mods.projection.StockNavigationApi.currentPosition(context);
+                    String geometry=Settings.Global.getString(context.getContentResolver(),StockMapJunction.KEY);
+                    if(position!=null)enlarged=StockMapJunction.drawTarget(geometry,SystemClock.elapsedRealtime(),
+                            position.longitude,position.latitude,position.heading,app,x.type,x.junction,
+                            x.hasExit,x.exit,meters,limit,mapRequestedId);
+                    mapReason=position==null?"position-stale-or-missing":StockMapJunction.diagnostic();
+                    String turnToken=mapTurnToken;
+                    enlarged=mapDisplay.apply(turnToken,StockMapJunction.node(),enlarged,
+                            SystemClock.elapsedRealtime(),meters,limit,
+                            position==null?Double.NaN:position.longitude,
+                            position==null?Double.NaN:position.latitude);
+                    mapState="stock-map-"+mapDisplay.state;
+                    JunctionMatchTrace.record(context,turnToken,SystemClock.elapsedRealtime(),meters,
+                            mapReason,mapDisplay.state,enlarged,position,geometry);
+                } catch(RuntimeException ignored) { /* Original TBT remains available. */ }
+            }
+            if(enlarged==null&&mapRequestedKind==1){
+                enlarged=RoundaboutEnlargement.draw(app,x.type,x.junction,x.side,x.hasExit,x.exit,null,meters,limit);
+                if(enlarged!=null){mapState="rotary-direction-only";mapReason+="/physical-arms-unavailable";}
+            }
+            if (enlarged==null && allowed && ((icon >= 65 && icon <= 71) || (icon >= 160 && icon <= 165)))
+                enlarged = PhoneJunction.drawAt(x.type, x.junction, x.hasExit, x.exit,
+                        x.angles, meters, limit);
+            String trial = "app=" + app + " source=" + source + " speed=" + speed
+                    + " threshold=" + limit + " policy=" + (stockDistance ? "road" : "speed") + " distance=" + meters
+                    + " hasExit=" + x.hasExit + " roads=" + (x.angles == null ? 0 : x.angles.length)
+                    + " matched=" + (enlarged != null)+" method="+mapState+" reason="+mapReason
+                    +" frame="+(enlarged==null?"none":java.util.Arrays.toString(enlarged));
+            if (!trial.equals(lastJunctionTrial)) { Dipo.log("Phone junction " + trial); lastJunctionTrial=trial; }
+        }
+        } catch (RuntimeException | LinkageError error) {
+            enlargementLinkageFailed=true;enlarged=null;mapDisplay.clear();
+            try {requestMap(false);} catch(RuntimeException | LinkageError ignored) {}
+            Dipo.error("CarPlay enlargement disabled after render failure; basic TBT retained",error);
+        }
+        if (enlarged != null) cluster.tbtInfo((int)enlarged[0], (int)enlarged[1], enlarged[2],
+                enlarged[3], 0, (int)enlarged[5], 0, (int)enlarged[7], 0);
+        else {
+            int[] progress=TurnPresentation.bar(icon,x.type,phoneMeters);
+            cluster.tbtInfo(icon,0,TurnPresentation.direction(icon,x.hasExit,x.exit),DisplayFormat.distance(dist,unit),
+                    0,0,unit,progress[0],progress[1]);
+        }
+        cluster.crossroadName(x.displayRoad());
         sendHud(icon, id, list);
         sendHudDist(dist, unit, next);
         sendAhead(id, list);
     }
 
-    private static int maneuverIcon(Maneuver x, int state) {
+    static int maneuverIcon(Maneuver x, int state) {
+        // Some apps send the roundabout maneuver type but omit junction/angle.
+        // Keep text and distance live; an absent exit must not imply straight.
+        if (x.type == 6 || x.type == 7) {
+            return x.hasExit ? roundaboutAngleIcon(x.exit, x.side) : 64;
+        }
+        if (x.type == 11) return 64; // route start, no directional instruction
         int facility = facilityIcon(x);
         if (facility != 0) return facility;
         int icon = icon(x.type, x.side, x.junction, x.exit, state);
         if (icon != 0 || !x.hasExit || x.junction != 1 || x.side != 0) return icon;
         // Some apps describe the roundabout with the junction and angle alone.
-        if (!(x.type == 0 || x.type == 1 || x.type == 2 || x.type == 6 || x.type == 7
+        if (!(x.type == 0 || x.type == 1 || x.type == 2 || x.type == 3 || x.type == 6 || x.type == 7
                 || x.type == 19 || (x.type >= 28 && x.type <= 46))) return 0;
-        int angle = x.exit;
-        if (angle < -180 || angle > 180) return 0;
+        return roundaboutAngleIcon(x.exit, x.side);
+    }
+
+    static int roundaboutAngleIcon(int angle, int side) {
+        if (angle < -180 || angle > 180 || side != 0) return 64;
         if (Math.abs(angle) >= 158) return 102;
         if (angle >= 113) return 100;
         if (angle >= 68) return 99;
@@ -599,9 +745,8 @@ final class CpTurns {
 
     private static int facilityIcon(Maneuver x) {
         if (x.junction != 0) return 0;
-        if ((x.type == 3 || x.type == 13 || x.type == 14) && x.tollText())
-            return x.restText() ? 0 : 178;
-        return x.roadFacilityIcon();
+        int icon = x.roadFacilityIcon();
+        return icon;
     }
 
     /**
@@ -713,7 +858,8 @@ final class CpTurns {
             int ramp = icon(type, side, junction, exit, 1);
             if (ramp != 0) return ramp;
         }
-        return 64;
+        int mapped = maneuverIcon(x, 1);
+        return mapped >= 64 ? mapped : 64;
     }
 
     /** the HUD's list frame (0xF2): count, this icon, the next turn's icon, 0, road after this turn (UTF-16LE) */
@@ -756,6 +902,7 @@ final class CpTurns {
 
     /** the HUD's distance (updateTBTSubInfo2C: unit, tenths for km/mi, whole up to 4095) */
     void sendHudDist(float f, int unit, Maneuver next) {
+        f=DisplayFormat.distance(f,unit);
         if (f < 0f || unit < 0 || unit > 4) return;
         int whole = (int) f;
         if (whole > 4095) whole = 4095;
@@ -769,7 +916,7 @@ final class CpTurns {
         if (hudNext != 0 && next != null && next.distance > 0) {
             int meters = next.distance;
             nextUnit = meters < 1000 ? Cluster.UNIT_M : Cluster.UNIT_KM;
-            nextTenths = meters < 1000 ? 0 : (meters % 1000) / 100;
+            nextTenths = meters < 1000 || meters>=10000 ? 0 : (meters % 1000) / 100;
             nextWhole = meters < 1000 ? meters : Math.min(4095, meters / 1000);
         }
         cluster.tbtSubInfo2C(unit, tenths, whole, nextUnit, nextTenths, nextWhole, 15, 15, 65535);
@@ -830,7 +977,7 @@ final class CpTurns {
             if (!showingGuidance || tripOutput == null) return;
             tripOutput.run();
             if (!tripRefreshLogged) {
-                Dipo.log("CarPlay 0.1.46 trip refresh running");
+                Dipo.log("CarPlay 1.0.0 trip refresh running");
                 tripRefreshLogged = true;
             }
             Dipo.turnsHandler.postDelayed(this, 750);
@@ -895,7 +1042,7 @@ final class CpTurns {
             hour = cal.get(Calendar.HOUR_OF_DAY);
             minute = cal.get(Calendar.MINUTE);
             timeType = 1;
-            timeFormat = context == null || DateFormat.is24HourFormat(context) ? 2 : 1;
+            timeFormat = 2;
         } else {
             timeFormat = -1;
         }
@@ -904,7 +1051,7 @@ final class CpTurns {
                 hour + ":" + minute + ":" + timeType + ":" + timeFormat;
         if (trip.equals(lastTrip)) return;
         lastTrip = trip;
-        final float distance = whole + tenths / 10f;
+        final float distance = DisplayFormat.distance(whole + tenths / 10f,unit);
         final int distanceUnit = unit, arrivalHour = hour, arrivalMinute = minute;
         final int arrivalType = timeType, arrivalFormat = timeFormat;
         tripOutput = new Runnable() {
@@ -915,7 +1062,7 @@ final class CpTurns {
                         arrivalType, arrivalFormat, 0f, -1, 0);
             }
         };
-        Dipo.log("CarPlay 0.1.46 trip distance=" + distance + " distanceErr=0 unit=" + distanceUnit);
+        Dipo.log("CarPlay 1.0.0 trip distance=" + distance + " distanceErr=0 unit=" + distanceUnit);
         tripOutput.run();
         Dipo.turnsHandler.removeCallbacks(refreshTrip);
         Dipo.turnsHandler.postDelayed(refreshTrip, 750);
@@ -990,7 +1137,7 @@ final class CpTurns {
         long eta, timeLeft;
         int[] list;
         int listCountAtSelection;
-        boolean visible, lanesShown, supports;
+        boolean visible, lanesShown, supports, hasNextDistance;
 
         /** as DiPO: a component id of 0 or less starts with nothing set (not even the defaults) */
         Update(int id, Iap2NotiMsg msg) {
@@ -1010,6 +1157,7 @@ final class CpTurns {
             distLeftStr = "";
             distLeftUnits = 0;
             distNext = 0;
+            hasNextDistance = false;
             nextStr = "";
             nextUnits = 0;
             list = null;
@@ -1027,7 +1175,6 @@ final class CpTurns {
         void read(int id, Iap2NotiMsg msg) {
             Iap2NotiMsg.Iap2ObjGroup g = msg == null ? null : msg.getItemGroup();
             if (g == null) return;
-            int[] previousList = list;
             for (int k = 0; k < g.getItemCnt(); k++) {
                 Iap2NotiMsg.Iap2ObjItem it = g.getObjItem(k);
                 int item = it.getItemId(), n = it.getItemObjCount();
@@ -1055,7 +1202,10 @@ final class CpTurns {
                         int[] v = n > 0 ? it.getItemIntArray() : null;
                         if (v == null) break;
                         if (item == 7) distLeft = v[0];
-                        else if (item == 10) distNext = v[0];
+                        else if (item == 10) {
+                            distNext = v[0];
+                            hasNextDistance = true;
+                        }
                         break;
                     }
                     case 3:
@@ -1099,7 +1249,7 @@ final class CpTurns {
                     }
                 }
             }
-            if (!java.util.Arrays.equals(previousList, list)) {
+            if (list != null) {
                 listCountAtSelection = list == null ? 0 : count;
             }
         }
@@ -1110,13 +1260,13 @@ final class CpTurns {
         int index, type, distance, distUnits, side, junction, exit, linkedLane;
         String description, afterRoad, distStr;
         int[] angles;
-        boolean hasExit;
+        boolean hasExit, hasDistance;
 
         /** Log facility hints without exporting route text. */
         String facilityTrace() {
             return " tollText=" + tollText() + " restText=" + restText()
-                    + " underpassText=" + hasRoadText("지하차도")
-                    + " overpassText=" + hasRoadText("고가차도")
+                    + " underpassText=" + FacilityGlyphs.under(String.valueOf(description)+" "+String.valueOf(afterRoad))
+                    + " overpassText=" + FacilityGlyphs.over(String.valueOf(description)+" "+String.valueOf(afterRoad))
                     + " roadsideText=" + (hasRoadText("옆길") || hasRoadText("옆 길") || hasRoadText("측도"))
                     + " description=" + description + " afterRoad=" + afterRoad
                     + " angles=" + java.util.Arrays.toString(angles);
@@ -1124,6 +1274,10 @@ final class CpTurns {
 
         String displayRoad() {
             String road = afterRoad == null ? "" : afterRoad;
+            if ((type == 6 || type == 7) && !hasExit) {
+                String action = type == 6 ? "회전교차로 진입" : "회전교차로 진출";
+                return road.trim().isEmpty() ? action : action + " · " + road;
+            }
             if (!road.trim().isEmpty()) return road;
             if (hasRoadText("지하차도") && !hasRoadText("고가차도")) return "지하차도";
             if (hasRoadText("고가차도") && !hasRoadText("지하차도")) return "고가차도";
@@ -1152,7 +1306,8 @@ final class CpTurns {
 
         private static boolean hasTollText(String text) {
             return text != null && (text.contains("요금소") || text.contains("톨게이트")
-                    || text.contains("자동징수") || text.contains("풍세TG"));
+                    || text.contains("자동징수") || text.matches("(?is).*\\bTG\\b.*")
+                    || text.matches("(?is).*TG(?:\\s|[()/,·].*|$)"));
         }
 
         private static boolean hasRestText(String text) {
@@ -1171,6 +1326,7 @@ final class CpTurns {
             type = 0;
             afterRoad = "";
             distance = 0;
+            hasDistance = false;
             distStr = "";
             distUnits = 2;
             side = 0;
@@ -1186,6 +1342,7 @@ final class CpTurns {
             this.index = index;
             exit = 0;
             hasExit = false;
+            java.util.ArrayList<Integer> receivedAngles = null;
             for (int k = 0; k < g.getItemCnt(); k++) {
                 Iap2NotiMsg.Iap2ObjItem it = g.getObjItem(k);
                 int item = it.getItemId(), n = it.getItemObjCount();
@@ -1194,8 +1351,10 @@ final class CpTurns {
                         int[] v = n > 0 ? it.getItemIntArray() : null;
                         if (item == 10) {
                             if (v != null) {
-                                angles = new int[n];
-                                for (int j = 0; j < n; j++) angles[j] = v[j];
+                                if (receivedAngles == null) receivedAngles = new java.util.ArrayList<Integer>();
+                                for (int j = 0; j < n && j < v.length; j++) receivedAngles.add(v[j]);
+                                angles = new int[receivedAngles.size()];
+                                for (int j = 0; j < angles.length; j++) angles[j] = receivedAngles.get(j);
                             } else {
                                 angles = null;
                             }
@@ -1212,7 +1371,10 @@ final class CpTurns {
                     }
                     case 6: {
                         int[] v = n > 0 ? it.getItemIntArray() : null;
-                        if (item == 5 && v != null) distance = v[0];
+                        if (item == 5 && v != null && v.length > 0) {
+                            distance = v[0];
+                            hasDistance = true;
+                        }
                         break;
                     }
                     case 8: {

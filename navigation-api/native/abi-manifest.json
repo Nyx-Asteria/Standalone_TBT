@@ -1,0 +1,27 @@
+{
+  "library_sha256": "de162d7015504906105037ae306d1514655791bc04d5e8a5caed10ff476b73b3",
+  "architecture": "ARMv7 Thumb / AAPCS softfp",
+  "required_symbols": [
+    "_ZN17CLifecycleManager12NewComponentEt",
+    "_ZN17CLifecycleManager15DeleteComponentEtP10CComponent",
+    "_ZN16CVehiclePositionC2Ev",
+    "_ZN16CVehiclePositionD2Ev",
+    "_ZN13CPositionInfo18GetDisplayPositionER16CVehiclePositionb",
+    "_ZN16CVehiclePosition11GetParcelIdEv",
+    "_ZN16CVehiclePosition9GetLinkIdEv",
+    "_ZN16CVehiclePosition12GetDirectionEv",
+    "_ZN14mByteAllocator19GetDefaultAllocatorEv",
+    "_ZN16mEntityAllocatorC2EP14mByteAllocator",
+    "_ZN11CEntityLinkC2ERK16mEntityAllocator",
+    "_ZN11CEntityLinkD2Ev",
+    "_ZN11CEntityLink10InitializeEyyt",
+    "_ZN11CEntityLink5SpawnEP6mArrayI13stConnectLinkEh",
+    "_ZN6mArrayI13stConnectLinkE5clearEv",
+    "_ZN11CEntityLink15GetAttrOverPassEv",
+    "_ZN11CEntityLink16GetAttrUnderPassEv"
+  ],
+  "missing_symbols": [],
+  "status": "offline-prototype-not-loaded",
+  "vehicle_position_storage_bytes": 1024,
+  "connection_stride": 88
+}

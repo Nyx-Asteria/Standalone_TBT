@@ -22,12 +22,13 @@ javac --release 8 -Xlint:-options -cp "$ANDROID_JAR:$tmp/runtime:$tmp/stubs" -d 
 jar cf "$tmp/classes.jar" -C "$tmp/classes" hmgapi
 "$D8" --min-api 19 --lib "$ANDROID_JAR" --classpath "$tmp/runtime" --classpath "$tmp/stubs" --output "$tmp/dex" "$tmp/classes.jar"
 jar cMf "$tmp/mod/hooks.jar" -C "$tmp/dex" classes.dex
-cp mod.json settings.json export-logs.sh "$tmp/mod/"
+cp mod.json settings.json export-logs.sh export-api-result.sh NOTICE.txt "$tmp/mod/"
+cp native/prebuilt/libstockgraph.so "$tmp/mod/"
 cp -R recipes "$tmp/mod/"
 java -cp "$tmp/runtime" hmgapi.engine.Signing sign "$tmp/mod" "$SIGNING_KEY"
 java -cp "$tmp/runtime" hmgapi.engine.Signing verify "$tmp/mod"
 version=$(sed -n 's/.*"version": "\([^"]*\)".*/\1/p' mod.json)
 archive="$root/dist/phone-projection-tbt-$version.zip"
-(cd "$tmp/mod" && find . -type f | LC_ALL=C sort | zip -q -X -D "$tmp/package.zip" -@)
+(cd "$tmp/mod" && find . -type f | LC_ALL=C sort | zip -0 -q -X -D "$tmp/package.zip" -@)
 mv "$tmp/package.zip" "$archive"
 printf '%s\n' "$archive"

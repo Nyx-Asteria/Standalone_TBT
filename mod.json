@@ -1,24 +1,34 @@
 {
   "id": "wired-carplay-tbt-lx2pe",
   "name": "Phone Projection TBT",
-  "version": "0.1.46",
+  "version": "1.0.0",
   "hmgapi": ">=1.0.2",
   "authors": [
     "Local build"
   ],
   "license": "AGPL-3.0",
-  "description": "Shows CarPlay turn-by-turn directions and lane guidance on the instrument cluster over wired or wireless connections. Android Auto TBT support is planned.",
+  "description": "Phone navigation turn-by-turn on the instrument cluster. CarPlay and Android Auto receivers, with native library fixes for supported builds.",
   "hooks": {
     "jar": "hooks.jar",
     "entry": "hmgapi.mods.projection.ProjectionTbt",
     "points": {
       "iap2.init_info.check_supports_features": "change",
       "dipo.iap2_proxy.stop_route_guidance": "observe",
-      "dipo.carplay.session_started": "observe"
+      "dipo.carplay.session_started": "observe",
+      "gpm.navigation_status.init": "change",
+      "gpm.navigation_status.next_turn": "observe",
+      "gpm.navigation_status.next_turn_distance": "observe",
+      "gpm.navigation_status.status": "observe",
+      "gpm.receiver.send_navigation_focus": "observe",
+      "gpm.receiver.destroy": "observe"
     },
     "native": {
       "libiap2session.so": [
         "recipes/lane-notify-guard.recipe"
+      ],
+      "libautoreceiver_infobank.so": [
+        "recipes/aa-tbt-48ee793a.recipe",
+        "recipes/aa-tbt-a0bea1c4.recipe"
       ]
     }
   },
@@ -29,6 +39,13 @@
     {
       "name": "usb-log-export",
       "script": "export-logs.sh",
+      "user": "root",
+      "start": "android",
+      "restart": true
+    },
+    {
+      "name": "api-result-export",
+      "script": "export-api-result.sh",
       "user": "root",
       "start": "android",
       "restart": true

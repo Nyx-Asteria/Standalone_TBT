@@ -1,17 +1,35 @@
-# Phone Projection TBT · Build
+# Building Phone Projection TBT 1.0.0
 
-Use a JDK that supports `javac --release 8`, Android SDK API 19, Android build-tools with D8, and a local checkout of [HMG-API](https://github.com/VysseCodes/HMG-API). The build was checked against upstream commit `9b57914818e93cf62887349b60dacbca83396bfe`.
+Requires JDK 11+ (Java 8 bytecode target), Android API 19 android.jar, Android SDK d8, zip, and the HMG-API source tree. HMG-API is available at https://github.com/VysseCodes/HMG-API. The build expects its core/runtime/java and core/runtime/stubs directories. Release build checked against commit `9b57914818e93cf62887349b60dacbca83396bfe` (1.0.2 runtime).
 
 ```sh
 export HMG_API=/path/to/HMG-API
-export ANDROID_JAR=/path/to/Android/sdk/platforms/android-19/android.jar
-export D8=/path/to/Android/sdk/build-tools/35.0.0/d8
-export SIGNING_KEY=/absolute/path/to/your.key
-sh build.sh
+export ANDROID_JAR=/path/to/android-19/android.jar
+export D8=/path/to/android-sdk/build-tools/VERSION/d8
+export SIGNING_KEY=/private/path/to/author.key
+./build.sh
 ```
 
-Generate your own author key with HMG-API's signing tool. HMG-API checks that updates are signed by the original author. The release key stays with the maintainer. The supplied Java stubs are compile-only.
+The standard update ZIP appears under dist/. The author key is not included. A differently signed build cannot replace the maintainer-signed installation without the appropriate uninstall/reinstall procedure. Do not change the installed mod identity to bypass signature checks.
 
-The checked-in recipe under `recipes/` is the native payload used by this release. Its corresponding ARM Thumb assembly and C source are in `native/`. See `native/README.md` for the recipe layout.
+## Native helper
 
-The signed update archive is named `phone-projection-tbt-<version>.zip`. The legacy internal mod ID and author key stay unchanged to preserve update compatibility. CarPlay implementations live in `hmgapi.mods.projection.carplay`; Android Auto TBT is planned and is not implemented by this rename.
+native/prebuilt/libstockgraph.so is the project-owned, tested ARM32 JNI helper, not a stock navigation engine. Full source and link-only libdl stubs are in navigation-api/native. To rebuild with Zig and a JDK:
+
+```sh
+export JAVA_HOME=/path/to/jdk
+export ZIG=/path/to/zig
+sh navigation-api/native/build-helper.sh
+```
+
+The output is navigation-api/native/libstockgraph.so. The build uses the tested prebuilt helper because NativePayload pins its exact digest. Rebuilding with a different compiler can change the bytes; review the resulting ABI/imports and update the digest only after verification before replacing the prebuilt file. Never package the link-only libdl stub. The helper expects only dlsym and dladdr from the device libdl.so. Vehicle stock engines and firmware are not redistributed.
+
+## Tests
+
+Java regression tests are under tests/. Compile against the app classes, Android API 19, runtime and source stubs. Run each package-qualified test main; NativePayloadTest takes native/prebuilt/libstockgraph.so as its argument. CompoundLoaderTest expects classes/ and tests/ output directories as siblings. Python tests exercise callback replay and exporter behavior with temporary data. They use the development layout (mod/, build-100/classes, runtime/, stubs/, android.jar); map the public root configuration/scripts and prebuilt helper into mod/ when running them. No private vehicle logs are required for the default test cases.
+
+## Installer
+
+The standard ZIP is the signed HMG-API update. A NEMESIS application wrapper must include this intact ZIP and the reviewed install/uninstall scripts. tools/build_usb_installer.py wraps that application package in a separate type=install USB descriptor. Do not put an application descriptor directly at the USB root.
+
+All release ZIPs use stored entries for compatibility with the target ZIP reader. Verify the HMG-API signature and ZIP CRCs after packaging. Keep signing keys, raw captures and stock binaries out of source archives.

@@ -1,25 +1,27 @@
 package hmgapi.mods.projection.carplay;
 
 /** Stock 0xF1 lane encoding. Each glyph part has its own two-bit possibility. */
-final class LaneGlyphs {
+public final class LaneGlyphs {
     private LaneGlyphs() {}
 
     // Verified in CGuidanceControl::updateClusterLaneInfo and ParserLaneInfoJson:
     // native valid type 1/2/3 (gray/white/blue) becomes possibility 3/1/2.
     static final int GRAY = 3, WHITE = 1, BLUE = 2;
 
-    static int[] encode(int status, int[] angles, int[] highlighted) {
+    public static int[] encode(int status, int[] angles, int[] highlighted) {
         int[] result = new int[6];
         boolean[] present = new boolean[9], selected = new boolean[9];
-        if (angles == null) return result;
-        for (int angle : angles) {
+        boolean usable = status == 1 || status == 2;
+        // TMAP can split one lane across the unhighlighted and highlighted
+        // lists (e.g. [-90] and [0]). Both lists contribute to its geometry.
+        if (angles != null) for (int angle : angles) present[angleIcon(angle)] = true;
+        if (usable && highlighted != null) for (int angle : highlighted) {
             int icon = angleIcon(angle);
             present[icon] = true;
-            if (status == 1 || status == 2) {
-                if (highlighted == null) selected[icon] = true;
-                else for (int h : highlighted) if (angleIcon(h) == icon) selected[icon] = true;
-            }
+            selected[icon] = true;
         }
+        if (usable && highlighted == null)
+            for (int icon = 1; icon <= 8; icon++) selected[icon] = present[icon];
         int[] icons = new int[3];
         int count = 0;
         for (int icon = 1; icon <= 8 && count < 3; icon++) {

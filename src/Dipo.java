@@ -40,12 +40,20 @@ public final class Dipo {
 
     static void log(String m) {
         mod.log(m);
+        if(app!=null)CpInputTrace.record(app.context,m);
     }
 
     static void error(String m, Throwable t) {
         mod.error(m, t);
+        if(app!=null)CpInputTrace.record(app.context,m+" error="+t);
     }
 
+    public static void mapSettingsChanged(final ModContext context) {
+        if(mod==null || turnsHandler==null || turns==null)return;
+        mod=context;
+        log("Projection enlargement settings enabled="+mod.settingBoolean("stock_map_junction",true));
+        turnsHandler.post(new Runnable(){public void run(){turns.mapSettingsChanged();}});
+    }
     /** Wireless.appLoaded, in DiPO's process */
     public static void start(ModContext m, LoadedApp a) {
         mod = m;
@@ -126,12 +134,12 @@ public final class Dipo {
                 post(new Runnable() {
                     @Override
                     public void run() {
-                        turns.stop("DiPO stop hook");
+                        turns.subscriptionStopped();
                     }
                 });
             }
         });
-        log("Phone Projection TBT 0.1.46: route guidance listener enabled");
+        log("Phone Projection TBT 1.0.0: route guidance listener enabled");
     }
 
     static void post(Runnable r) {
@@ -157,6 +165,14 @@ public final class Dipo {
         } catch (Throwable t) {
             error("CarPlay: route guidance listener", t);
         }
+    }
+
+    static void resumeRouteGuidance() {
+        IIap2Service service=iap2;
+        if(service==null){log("CarPlay: subscription recovery unavailable; iAP2 gone");return;}
+        try {log("CarPlay: subscription recovery Start-only result="+
+                service.Iap2SvcStartRouteGuidanceUpdate(RG_COMPONENTS,true,true));}
+        catch(Throwable error){error("CarPlay subscription recovery",error);}
     }
 
     /** after a source change: Stop, then Start, so the phone sends its whole current state (the build's HmgApiRgRestart) */
@@ -245,9 +261,9 @@ public final class Dipo {
                         }
                         String record = raw.toString();
                         if (what == RG_MANEUVER) {
-                            log("TBT 0.1.46 received maneuver" + record);
+                            log("TBT 1.0.0 received maneuver" + record);
                         } else if (!record.equals(lastRouteFields)) {
-                            log("TBT 0.1.46 received route" + record);
+                            log("TBT 1.0.0 received route" + record);
                             lastRouteFields = record;
                         }
                     }

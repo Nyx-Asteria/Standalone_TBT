@@ -1,7 +1,13 @@
-/dist/
-/build/
+dist/
+build*/
+*.class
+*.o
+__pycache__/
 *.key
 *.key.pub
-*.class
-*.log
+android.jar
+runtime/
+mod/
+navigation-api/native/libstockgraph.so
+navigation-api/native/link-stubs/build/
 .DS_Store
