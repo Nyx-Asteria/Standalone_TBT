@@ -30,6 +30,6 @@ Java regression tests are under tests/. Compile against the app classes, Android
 
 ## Installer
 
-The standard ZIP is the signed HMG-API update. A NEMESIS application wrapper must include this intact ZIP and the reviewed install/uninstall scripts. tools/build_usb_installer.py wraps that application package in a separate type=install USB descriptor. Do not put an application descriptor directly at the USB root.
+The standard ZIP is the signed HMG-API update. A NEMESIS application wrapper includes this intact ZIP and the reviewed install/uninstall scripts from installer/. Build it with `python3 tools/build_application_package.py dist/phone-projection-tbt-1.0.0.zip dist/phone-projection-tbt-1.0.0-nemesis-package.zip`. tools/build_usb_installer.py wraps that application package in a separate type=install USB descriptor. Do not put an application descriptor directly at the USB root.
 
 All release ZIPs use stored entries for compatibility with the target ZIP reader. Verify the HMG-API signature and ZIP CRCs after packaging. Keep signing keys, raw captures and stock binaries out of source archives.
