@@ -9,7 +9,7 @@
 | 팰리세이드 LX2 PE 2023 (개발 차량) | LX2PE.KOR.0000.V039.001.260902. CarPlay NAVER·TMAP, AA NAVER·TMAP 기본 TBT·한글·잔여 거리·종료 동작 확인 | 최신 확대 안내 수정의 실차 재검증 |
 | 팰리세이드 2022 | 유선 CarPlay TMAP 기본 TBT 사용자 확인. 펌웨어 미확인 | HUD·확대 안내·다른 앱 |
 | 스팅어 마이스터 3.3 2023 | CK_PE_22.KOR.S5W_M.V039.001.260902. CarPlay NAVER 유선·무선 계기판·HUD 사용자 확인 | AA, 최신 확대 안내 |
-| K7 프리미어 2.5 2021 | YGPE.KOR.0000.V039.001.26.09.02 (제보 표기). v0.1.58 무선 CarPlay NAVER 6.12.3 계기판 기본 TBT 정상 [사용자 제보](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/issues/4). HUD 미장착 | 최신 버전·확대 안내 |
+| K7 프리미어 2.5 2021 | YGPE.KOR.0000.V039.001.26.09.02 (제보 표기). 무선 CarPlay NAVER 6.12.3 계기판 기본 TBT 정상. [v1.0.0 출근 주행 정상 제보](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/issues/4#issuecomment-6935343279), 확대 안내 정상은 운영자 추가 확인(2026-11-17). HUD 미장착 | 다른 앱·AA, 개별 특수 도형의 세부 검증 |
 | K5 DL3 1.6T 2022 | DL322.KOR.0000.V039.001.260902. AA NAVER 기본 TBT 사용자 확인. 엔진 수집·정적 비교 완료 | 엔진 허용 이후 확대 안내 실차 재확인 |
 | 쏘나타 DN8 HEV 2022 | DN822HEV.KOR.0000.V039.001.260902. AA NAVER 기본 TBT, 계기판·HUD 확대 안내와 거리 막대 사용자 확인 | 교차로 형상·확대 시작 시점·최신 요금소/진출로 수정 |
 
