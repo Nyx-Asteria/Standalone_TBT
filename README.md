@@ -22,7 +22,9 @@ CarPlay 안내 구독 중단 복구, 별도 로더에서 발생한 확대 안내
 
 ## 추가 실차 확인
 
-2021 K7 프리미어 2.5(YGPE, 260902)에서 무선 CarPlay·NAVER 지도 조합으로 **1.0.0 기본 TBT와 확대 안내 정상 동작**이 사용자 확인됐습니다. HUD 미장착 차량이며, 개별 특수 도형 전체의 검증을 뜻하지 않습니다. [제보 #4](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/issues/4)
+등록 차량 대부분에서 확대 안내 정상 작동 사례도 사용자 확인됐습니다. 개별 시설·교차로 형상 문제는 별도로 검증합니다.
+
+2021 K7 프리미어 2.5(YGPE, 260902)에서 무선 CarPlay·NAVER 지도 조합으로 **1.0.0 기본 TBT 정상 동작**이 사용자 확인됐습니다. HUD 미장착 차량이며, K7의 확대 안내는 추가 확인 중입니다. [제보 #4](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/issues/4)
 
 ## 소스와 라이선스
 
