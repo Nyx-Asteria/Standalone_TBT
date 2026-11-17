@@ -12,4 +12,6 @@ Version 1.0.0 includes subscription recovery, enlargement linkage-error containm
 
 See [release notes](RELEASE-v1.0.0.md) and [compatibility](COMPATIBILITY.md). Historical vehicle reports cover different feature subsets. Latest toll, off-ramp and roundabout fixes passed host replay tests and still require vehicle validation. Unknown engine hashes skip stock-map queries and retain basic TBT.
 
+Additional vehicle report: a 2021 K7 Premier 2.5 (YGPE, 260902) owner confirmed v1.0.0 operation with wireless CarPlay and NAVER Map; the maintainer additionally relayed successful junction enlargement on 2026-11-17. The vehicle has no HUD. This does not validate every special diagram. [Issue #4](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/issues/4).
+
 [Build instructions](BUILD.md). AGPL-3.0; see [notices](NOTICE.txt). Private logs, stock navigation engines, firmware and signing keys are excluded. JNI helper source is included under navigation-api/native.
