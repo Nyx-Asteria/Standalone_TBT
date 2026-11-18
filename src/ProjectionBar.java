@@ -50,7 +50,7 @@ public final class ProjectionBar {
         public void name(String value){name=value;}
         public int level(){return last;}public int toll(){return lastToll;}
         public boolean due(int bar,int toll,long now){
-            boolean changed=toll!=lastToll||(toll==1&&!java.util.Objects.equals(name,sentName))||(toll==1&&now-at>=1000);lastToll=toll;sentName=name;
+            boolean changed=toll!=lastToll||(toll==1&&!java.util.Objects.equals(name,sentName))||(toll==1&&now-at>=200);lastToll=toll;sentName=name;
             boolean due=due(bar,now);
             if(changed){last=bar;at=now;}return changed||due;
         }

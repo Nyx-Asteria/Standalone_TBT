@@ -50,7 +50,7 @@ public final class StockMapJunction {
     String[] f=encoded.split(",");long age=now-Long.parseLong(f[0]);
     if(age<0||age>2500)return reject("snapshot-stale");
     long[] a=new long[f.length-1];for(int i=0;i<a.length;i++)a[i]=Long.parseLong(f[i+1]);
-    float[] frame=CompoundJunction.draw(a,targetId,lon,lat,type,junction,hasExit,exit,meters,threshold);
+    float[] frame=CompoundJunction.draw(a,targetId,lon,lat,type,junction,hasExit,exit,meters,threshold,heading);
     DIAGNOSTIC.set(CompoundJunction.reason);if(frame!=null)NODE.set(CompoundJunction.node);return frame;
    }catch(IllegalArgumentException error){return reject("malformed-compound-snapshot");}
   }

@@ -32,6 +32,6 @@ with tempfile.TemporaryDirectory() as tmp:
  }}'''}
  for path,source in sources.items():
   f=p/path;f.parent.mkdir(parents=True,exist_ok=True);f.write_text(source)
- cp=':'.join(str(r/x) for x in ['build-100/classes','android.jar','runtime','stubs'])
+ cp=':'.join(str(r/x) for x in ['build-105/classes','android.jar','runtime','stubs'])
  subprocess.run(['javac','--release','8','-Xlint:-options','-cp',cp,'-d',str(p),*[str(p/x) for x in sources]],check=True)
  subprocess.run(['java','-cp',str(p)+':'+cp,'hmgapi.mods.projection.AaCallbackReplay'],check=True)

@@ -64,17 +64,19 @@ final class ProjectionTrapBar {
     private final Runnable barRun = new Runnable() {
         @Override
         public void run() {
-            int b,toll;boolean nameChanged;
+            int b,toll;
             synchronized (ProjectionTrapBar.this) {
                 barPosted = false;
                 b = pendingBar;toll=pendingToll;String nextName=toll==1?pendingName:null;
-                nameChanged=!java.util.Objects.equals(tollName,nextName);tollName=nextName;
+                tollName=nextName;
             }
             boolean phone = ProjectionBar.guiding(app.context);
             Integer r;
             synchronized (ProjectionTrapBar.this) {
                 r = navi.onBar(b,toll,phone,now());
-                if(r==null&&nameChanged&&navi.toll()==1)r=navi.current();
+                // A repeated toll TBT frame can replace the full booth picture. Reapply
+                // displayTG even when its level/name did not change; send() coalesces at 200 ms.
+                if(r==null&&navi.toll()==1)r=navi.current();
                 if(b!=ProjectionBar.NONE&&!navi.seen&&!missingStockLogged){missingStockLogged=true;log("waiting for the first actual stock trap frame");}
             }
             if (r != null) send();

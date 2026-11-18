@@ -42,6 +42,28 @@
       "apply": "restart",
       "title": "요금소 접근 표시 · 시험",
       "description": "요금소로 식별된 안내가 1km 미만이면 순정 요금소 표시 상태와 거리 막대 값을 함께 보냅니다. 앱이 요금소 정보를 보내지 않으면 식별하지 못할 수 있습니다."
+    },
+    {
+      "key": "arrival_time_format",
+      "type": "choice",
+      "default": "24",
+      "apply": "restart",
+      "title": "도착 예정 시간 표시",
+      "description": "12시간·24시간·차량 설정 중 선택해 주세요. 앞자리 0과 거리의 소수점 표시 형식은 이 설정에서 변경할 수 없습니다.",
+      "options": [
+        {
+          "value": "24",
+          "title": "24시간 (23:00)"
+        },
+        {
+          "value": "12",
+          "title": "12시간 (11:00 PM)"
+        },
+        {
+          "value": "system",
+          "title": "차량 시간 설정에 맞춤"
+        }
+      ]
     }
   ]
 }

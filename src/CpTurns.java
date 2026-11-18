@@ -31,7 +31,6 @@ import hmgapi.mods.projection.ProjectionTbt;
  *   - the HUD list (0xF2 frame: icon, next icon, road) and the HUD distance (2C)
  *   - remaining distance and arrival time (updateTBTSubInfo, in the owner's units)
  *   - up to 3 upcoming turns (updateTPTurnList, owner's units) and lanes (0xF1 frame)
- * The optional status experiment replays the legacy DiPO start and stop calls.
  * Also from the build: when the source app changes (Apple Maps to Waze, say), what the
  * old app left is cleared and route guidance restarted, so the phone resends all of it.
  * Not ported: DiPO's per-region icon filters (China, Europe, Middle East, Australia,
@@ -621,7 +620,7 @@ final class CpTurns {
                 + x.facilityTrace() + " next=" + (next == null ? "missing"
                         : next.type + "/" + next.exit + "/" + next.distance + next.facilityTrace());
         if (!trace.equals(lastTurnTrace)) {
-            Dipo.log("CarPlay 1.0.0 turn " + trace);
+            Dipo.log("CarPlay 1.0.5 turn " + trace);
             lastTurnTrace = trace;
         }
         // Publish the name after the display frame below; some clusters gate names by display type.
@@ -977,7 +976,7 @@ final class CpTurns {
             if (!showingGuidance || tripOutput == null) return;
             tripOutput.run();
             if (!tripRefreshLogged) {
-                Dipo.log("CarPlay 1.0.0 trip refresh running");
+                Dipo.log("CarPlay 1.0.5 trip refresh running");
                 tripRefreshLogged = true;
             }
             Dipo.turnsHandler.postDelayed(this, 750);
@@ -1042,7 +1041,7 @@ final class CpTurns {
             hour = cal.get(Calendar.HOUR_OF_DAY);
             minute = cal.get(Calendar.MINUTE);
             timeType = 1;
-            timeFormat = 2;
+            timeFormat = DisplayFormat.arrivalFormat(Dipo.mod==null?"24":Dipo.mod.settingString("arrival_time_format","24"),context);
         } else {
             timeFormat = -1;
         }
@@ -1062,7 +1061,7 @@ final class CpTurns {
                         arrivalType, arrivalFormat, 0f, -1, 0);
             }
         };
-        Dipo.log("CarPlay 1.0.0 trip distance=" + distance + " distanceErr=0 unit=" + distanceUnit);
+        Dipo.log("CarPlay 1.0.5 trip distance=" + distance + " distanceErr=0 unit=" + distanceUnit);
         tripOutput.run();
         Dipo.turnsHandler.removeCallbacks(refreshTrip);
         Dipo.turnsHandler.postDelayed(refreshTrip, 750);

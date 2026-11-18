@@ -53,7 +53,7 @@ while true; do
         case "$folder" in /storage/usb[012]/TBT-LOGS) ;; *) continue ;; esac
         case " $last_folders " in *" $folder "*) [ "$refresh_ticks" -eq 0 ] || continue ;; esac
         {
-            echo 'collector_runtime=1.0.0'
+            echo 'collector_runtime=1.0.5'
             echo "captured=$(date)"
             echo 'phase=collecting_current_logs'
         } > "$stage/status"
@@ -67,7 +67,7 @@ while true; do
         {
             echo "build=$(getprop ro.build.product)"
             echo "captured=$(date)"
-            echo 'collector_runtime=1.0.0'
+            echo 'collector_runtime=1.0.5'
             echo "boot_id=$(cat /proc/sys/kernel/random/boot_id 2>/dev/null)"
             echo "uptime=$(cat /proc/uptime 2>/dev/null)"
             cat "$stage/capture-status" "$stage/logcat-error.txt"
@@ -103,12 +103,12 @@ while true; do
             echo 'finished=1'
         } > "$stage/stock-guidance.log"
         {
-            echo 'collector=android-auto-1.0.0'
+            echo 'collector=android-auto-1.0.5'
             grep -E 'captured=|Android Auto TBT|Android Auto turn-by-turn|TBT transport app=com.google.android.projection.sink|TBT transport app=com.daudio.app.gpm' "$stage/stock-guidance.log" || :
             echo 'finished=1'
         } > "$stage/android-auto.log"
         {
-            echo 'collector=junction-capture-1.0.0'
+            echo 'collector=junction-capture-1.0.5'
             grep -E 'captured=|Stock graph probe|Stock navigation API|Phone junction|Junction trial|Junction capture|TBT transport|Cluster trace|guidance source|received route| turn index=|maneuver input' "$stage/stock-guidance.log" || :
             echo 'finished=1'
         } > "$stage/junction-capture.log"

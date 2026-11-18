@@ -16,7 +16,7 @@ final class JunctionMatchTrace {
     if(!file.renameTo(old))return;
    }
    String p=position==null?"none":position.elapsed+","+position.latitude+","+position.longitude+","+position.heading;
-   String line="1.0.0\t"+System.currentTimeMillis()+"\t"+android.os.Process.myPid()+"\t"+now
+   String line="1.0.5\t"+System.currentTimeMillis()+"\t"+android.os.Process.myPid()+"\t"+now
       +"\t"+token.replace('\t',' ').replace('\n',' ')+"\t"+meters+"\t"+reason+"\t"+state+"\t"+java.util.Arrays.toString(frame)
       +"\t"+p+"\t"+(geometry==null?"none":geometry)+"\n";
    try(FileOutputStream out=new FileOutputStream(file,true)){out.write(line.getBytes("UTF-8"));}

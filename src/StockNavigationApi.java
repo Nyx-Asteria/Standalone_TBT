@@ -51,13 +51,13 @@ public final class StockNavigationApi {
     }
     private static void publishStatus(LoadedApp app,String state) {
         try {Settings.Global.putString(app.context.getContentResolver(),
-                "hmgapi_stock_navigation_status_v1", "1.0.0,"+android.os.Process.myPid()+","
+                "hmgapi_stock_navigation_status_v1", "1.0.5,"+android.os.Process.myPid()+","
                 +SystemClock.elapsedRealtime()+","+state);}
         catch(RuntimeException ignored) { /* Diagnostics cannot block navigation. */ }
     }
     static void install(final ModContext mod,final LoadedApp app) {
         StockGraphNative.captureInitialized(app);
-        mod.log("Stock navigation API runtime=1.0.0 install begin; probeEnabled="
+        mod.log("Stock navigation API runtime=1.0.5 install begin; probeEnabled="
                 + false);
         publishStatus(app,"install_begin");
         try {

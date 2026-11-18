@@ -24,6 +24,7 @@ with tempfile.TemporaryDirectory() as tmp:
  public static class Turn {public int type,direction,traffic,no,unit;public String name,exitNumber;public float distance;}
  public void tbtInfo(int a,int b,float c,float d,int e,int f,int g,int h,int i){lastType=a;lastDistance=d;frames.add(new long[]{android.os.SystemClock.now,a,(long)(d*1000),g});}
  public void tbtSubInfo2C(int a,int b,int c,int d,int e,int f,int g,int h,int i){}
+ public void tbtSubInfo(float a,int b,int c,int d,int e,int f,int g,float h,int i,int j){}
  public void turnListNew(byte[] f){}public void turnList(Turn[] t){}public void crossroadName(String s){crossroad=s;}public void destinationName(int n,String s){}
  }''',
  'hmgapi/mods/projection/AaNotificationReplay.java':'''package hmgapi.mods.projection;
@@ -72,6 +73,16 @@ with tempfile.TemporaryDirectory() as tmp:
  k.nextTurnDistance(350,0,350000,1);ok(hmgapi.mods.projection.carplay.AaEnlargement.draws>drawCount);
  drawCount=hmgapi.mods.projection.carplay.AaEnlargement.draws;
  k.nextTurn("바뀐 도로명",1,13,180,0);ok(hmgapi.mods.projection.carplay.AaEnlargement.draws>drawCount);
+ // No camera label: a notice carries existing destinations but an unrelated short distance.
+ AaTurns unnamed=new AaTurns(null,c,h,null);unnamed.navLive=true;
+ h.advance(20000);unnamed.nextTurn("route",2,9,-1,0);unnamed.nextTurnDistance(1600,0,1600,3);
+ h.advance(20900);unnamed.nextTurn("same destination",3,2,-1,0);unnamed.nextTurnDistance(134,0,0,1);
+ h.advance(22000);unnamed.nextTurnDistance(1500,0,1500,3);
+ h.advance(22900);unnamed.nextTurn("same destination",3,2,-1,0);unnamed.nextTurnDistance(89,0,0,1);
+ h.advance(23900);unnamed.nextTurnDistance(66,0,0,1);h.advance(24401);
+ ok(unnamed.event==9&&c.lastType==66&&unnamed.distance>=1.5f);
+ h.advance(25000);unnamed.nextTurn("route",2,9,-1,0);unnamed.nextTurnDistance(1400,0,1400,3);ok(c.lastType==66&&c.lastDistance>1.39f&&c.lastDistance<1.41f);
+ System.out.println("Unnamed directionless notice: conflicting short distance never changes maneuver, normal route resumes passed");
  if(args.length==0)return;
  h=new Handler();c=new Cluster();t=new AaTurns(null,c,h,null);t.navLive=true;String rawRoad="";int turns=0;
  for(String line:Files.readAllLines(Paths.get(args[0]))) {
@@ -79,6 +90,20 @@ with tempfile.TemporaryDirectory() as tmp:
  if(a[1].equals("S")){String road=AaStateText.currentRoad(a[2]);if(road!=null)rawRoad=road;}
  if(a[1].equals("T")){t.nextTurn(rawRoad,Integer.parseInt(a[3]),Integer.parseInt(a[2]),Integer.parseInt(a[4]),0);turns++;}
  if(a[1].equals("D")){int m=Integer.parseInt(a[2]),f=Integer.parseInt(a[3]);int e3=(f==1?m*1000:m);t.nextTurnDistance(m,0,e3,f);}
+ }
+ if(args.length>1&&args[1].equals("unnamed-notice")){
+ int held=0,recovered=0;
+ for(long[] f:c.frames){
+  if(f[0]>=223900&&f[0]<229000){ok(f[1]==66);ok(f[2]>=1000);held++;}
+  if(f[0]>=229000&&f[0]<231000&&f[1]==66&&f[2]>=1300&&f[2]<=1500)recovered++;
+ }
+ ok(held>0&&recovered>0);System.out.println("Actual unnamed notice replay: right fork retained, 134/89/66m isolated, route1400m restored; held="+held+", recovered="+recovered);return;
+ }
+ if(args.length>1&&args[1].equals("camera-distance")){
+ int held=0,recovered=0;
+ for(long[] f:c.frames){if(f[0]>=817815&&f[0]<819799)ok(f[2]!=452000&&f[2]!=427000);if(f[0]>=827800&&f[0]<831575){ok(f[2]!=198000&&f[2]!=174000);held++;}
+ if(f[0]>=831575&&f[0]<832900&&f[2]>=648000&&f[2]<=671000)recovered++;}
+ ok(held>0&&recovered>0);System.out.println("DL3 actual camera replay: late camera198 suppressed, route671/648 restored; held="+held+", recovered="+recovered);return;
  }
  if(args.length>1&&args[1].equals("toll")){
  int count=0;for(long[] f:c.frames)if(f[0]>=Long.parseLong(args[2])&&f[0]<=Long.parseLong(args[3])){count++;ok(f[1]==178);}
@@ -95,6 +120,6 @@ with tempfile.TemporaryDirectory() as tmp:
  }}'''}
  for path,source in sources.items():
   f=p/path;f.parent.mkdir(parents=True,exist_ok=True);f.write_text(source)
- cp=':'.join(str(r/x) for x in ['build-100/classes','android.jar','runtime','stubs'])
+ cp=':'.join(str(r/x) for x in ['build-105/classes','android.jar','runtime','stubs'])
  subprocess.run(['javac','--release','8','-Xlint:-options','-cp',cp,'-d',str(p),*[str(p/x) for x in sources]],check=True)
  subprocess.run(['java','-cp',str(p)+':'+cp,'hmgapi.mods.projection.AaNotificationReplay']+sys.argv[1:],check=True)

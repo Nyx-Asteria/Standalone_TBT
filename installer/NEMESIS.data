@@ -3,9 +3,9 @@ version=1.1
 id=hmgapi.wired-carplay-tbt-lx2pe
 name=Phone Projection TBT
 type=application
-package-version=1.0.0
+package-version=1.0.5
 short-desc="HMG-API mod: Phone Projection TBT"
-detailed-desc="Phone Projection TBT 1.0.0. CarPlay guidance and experimental Android Auto receiver. Some app and vehicle behavior is unverified."
+detailed-desc="Phone Projection TBT 1.0.5. CarPlay guidance and experimental Android Auto receiver. Some app and vehicle behavior is unverified."
 os="any"
 models="any"
 depends="hmgapi@>=1.0.2"

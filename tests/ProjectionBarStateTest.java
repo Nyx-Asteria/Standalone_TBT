@@ -12,6 +12,7 @@ public final class ProjectionBarStateTest {
   toll[0]=184;ok(ProjectionBar.tollFromTbt(toll)==1);toll[6]=1;ok(ProjectionBar.tollFromTbt(toll)==0);
   toll[6]=0;toll[3]=1100f;ok(ProjectionBar.tollFromTbt(toll)==0);toll[3]=400f;toll[7]=0;ok(ProjectionBar.tollFromTbt(toll)==0);
   ProjectionBar.Sender ts=new ProjectionBar.Sender();ok(ts.due(40,0,0));ok(ts.due(40,1,1));ok(!ts.due(40,1,2));ok(ts.due(40,0,3));
+  ok(ts.due(40,1,1000));ok(!ts.due(40,1,1199));ok(ts.due(40,1,1200));
   System.out.println("Projection gauge: dual-frame level extraction, change/heartbeat, missing stock, expiry, clear and restoration passed");
  }
 }

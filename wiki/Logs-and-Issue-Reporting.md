@@ -1,248 +1,28 @@
-> 현재 일반 릴리즈: 1.0.0 (2026-11-17). 최신 호환성과 검증 대기 항목은 [[Compatibility]]를 확인해 주세요.
+# 로그 수집 및 문제 제보
 
+## 수집 방법
 
-# Logs and Issue Reporting — 로그 수집 및 문제 제보
+1. USB 저장장치 최상위에 `TBT-LOGS` 폴더를 만들어 주세요.
+2. TBT가 실행되는 차량에 USB를 연결하고 증상을 재현해 주세요.
+3. 로그 저장이 완료된 뒤 `TBT-LOGS` **폴더 전체**를 압축해 주세요. 입력·출력을 비교해야 하므로 일부 파일만 고르지 마세요.
+4. 차종·연식·전체 펌웨어·TBT 버전·내비 앱·CarPlay/AA·유선/무선·발생 시각을 함께 알려 주세요.
 
-[Home](Home) · [Troubleshooting](Troubleshooting) · [Compatibility](Compatibility)
-
-HMG Phone Projection TBT의 진단 로그 수집 방법과 GitHub Issue 작성 방법을 안내합니다.
-
-문제 분석을 위해 로그가 필요한 경우가 있지만, TBT 로그에는 **개인의 실제 이동 경로와 위치 정보**가 포함될 수 있습니다.
-
-공개 전 반드시 개인정보를 확인해 주세요.
-
----
-
-## 1. 로그 수집 방법
-
-Phone Projection TBT에는 USB를 이용한 로그 내보내기 기능이 포함되어 있습니다.
-
-### Step 1. USB 준비
-
-USB 저장장치의 최상위 경로에 다음 폴더를 만듭니다.
-
-`TBT-LOGS`
-
-예시:
-
-```text
-USB/
-└── TBT-LOGS/
-```
-
-### Step 2. 차량에 연결
-
-Phone Projection TBT가 실행 중인 상태에서 준비한 USB를 차량에 연결합니다.
-
-로그 내보내기 서비스는 USB의 `TBT-LOGS` 폴더가 새로 감지되면 관련 진단 정보를 내보냅니다.
-
-### Step 3. 생성 파일 확인
-
-내보내기가 정상적으로 완료되면 다음 파일이 생성될 수 있습니다.
-
-```text
-TBT-LOGS/
-├── phone-projection-tbt.log
-├── stock-guidance.log
-└── cluster-reference/
-    ├── automotive.jar
-    └── automotive.odex
-```
-
-`cluster-reference` 폴더의 파일은 차량에 존재하고 읽을 수 있는 경우에만 복사되므로 일부 파일이 없을 수 있습니다.
-
-로그가 생성되지 않았다면 폴더명과 USB 인식 상태를 확인하고 다시 연결해 보세요.
-
----
-
-## 2. 파일별 설명
+## 주요 파일
 
 | 파일 | 내용 |
 | --- | --- |
-| `phone-projection-tbt.log` | HMG-API 모드 로그 및 안내 관련 기록 |
-| `stock-guidance.log` | 순정 길안내·계기판 관련 진단 기록 |
-| `cluster-reference/` | 분석용 차량 프레임워크 참조 파일 |
+| `phone-projection-tbt.log`, `stock-guidance.log` | 설치 버전·수집 정보와 일반 기록 |
+| `export-status.txt` | 수집 진행·완료·보조 파일 오류 상태 |
+| `carplay-input.log`, `carplay-tbt-output.log` | CarPlay 수신 및 차량 API 출력 |
+| `aa-input.log`, `aa-input.log.1` | AA 안내·거리·상태 입력 |
+| `aa-raw-packets.log` 및 `.1` | AA 원본 알림 패킷 |
+| `aa-tbt-output.log` | AA 최종 TBT 출력 |
+| `stock-cluster-input.log`, `stock-tbt-output.log` | 순정 표시·경고·TBT 출력 |
+| `aa-junction-match.log`, `junction-match.log`, `stock-road-graph.log` | 확대 대상 대응과 도로 형상 진단 |
+| `api-result.txt` | 순정 도로 API 준비 단계 |
 
-문제 분석에는 일반적으로 두 로그 파일이 우선적으로 사용됩니다.
+사용한 연결 방식·안내 여부에 따라 없는 파일이 있을 수 있습니다. 버전·부팅·시각이 다른 과거 행이 섞일 수 있어 파일 하나만으로 현재 상태를 단정하지 않습니다. `finished=1`만으로 안내 데이터까지 수신됐다는 뜻은 아닙니다.
 
-**`cluster-reference`에 들어 있는 차량 프레임워크 바이너리는 일반적인 오류 제보에 필요하지 않으며, 공개 Issue에 첨부하지 마세요.**
+로그에는 실제 도로명·위치·이동 경로가 포함될 수 있습니다. 공개 전 내용을 확인하거나 비공개로 전달해 주세요. `cluster-reference`의 차량 프레임워크 바이너리와 순정 엔진은 공개 이슈에 올리지 마세요.
 
-참고로 로그 파일에는 최근 기록뿐 아니라 일부 이전 기록도 포함될 수 있습니다.
-
----
-
-## 3. 로그 수집 시 권장 사항
-
-가능하면 다음 순서로 문제를 재현해 주세요.
-
-1. 차량을 안전한 장소에 정차하고 모드 상태를 확인합니다.
-2. CarPlay 또는 Android Auto로 내비게이션을 연결합니다.
-3. 문제가 발생하는 상황을 확인합니다.
-4. 발생 시각을 기록합니다.
-5. 안전하게 정차한 상태에서 USB로 로그를 수집합니다.
-6. 로그에서 해당 시각 전후의 기록을 확인합니다.
-
-특히 다음 문제가 발생한 경우 가능한 한 정확한 시각을 알려 주세요.
-
-- 현재 안내 미표시
-- 다음 안내 누락
-- 목적지 잔여 거리 문제
-- 한글 안내 오류
-- 안내 종료 문제
-- 차선 화살표 누락
-- 특수 시설 심볼 오류
-
----
-
-## 4. 개인정보 마스킹
-
-TBT 로그에는 다음과 같은 개인정보가 포함될 수 있습니다.
-
-- 현재 도로명
-- 교차로명 및 경로상 도로명
-- 목적지 또는 경유지 이름
-- 상세 주소
-- 위치 좌표
-- 실제 주행 경로
-
-특히 다음과 같은 로그 항목을 확인해 주세요.
-
-```text
-text=...
-Stock guidance sendNaviInsideData ... array(5)[...]
-```
-
-위 형식의 로그에는 실제 길안내 정보 또는 위치 관련 데이터가 포함될 수 있습니다.
-
-### 마스킹 예시
-
-원본:
-
-```text
-text=개인 목적지 정보
-```
-
-마스킹 후:
-
-```text
-text=[REDACTED]
-```
-
-위치 좌표, 주소 및 목적지 정보도 동일하게 비식별 처리해 주세요.
-
-마스킹할 때 가능한 범위에서 다음 분석 정보는 유지하는 것이 좋습니다.
-
-- 타임스탬프
-- 함수 및 이벤트 이름
-- TBT 심볼 코드
-- 차선 관련 상태
-- 패치 적용 결과
-- 오류 메시지
-
-단, 오류 메시지 내부에도 개인정보가 들어 있다면 해당 부분을 반드시 가려 주세요.
-
-로그 전체에 개인정보가 반복될 수 있으므로 특정 한 줄만 수정하고 바로 게시하지 마세요.
-
----
-
-## 5. GitHub Issue 작성
-
-문제를 발견했다면 아래 링크로 제보해 주세요.
-
-[Create a New Issue](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/issues/new)
-
-### 권장 제목
-
-```text
-[국가 / 차종 코드 / 펌웨어] 증상
-```
-
-예시:
-
-```text
-[KOR / LX2PE / 260902] 차선 안내 일부 누락
-```
-
-### 권장 제보 양식
-
-```markdown
-## 차량 정보
-- 제조사 및 차종:
-- 연식:
-- 국가:
-- AVN 세대:
-- AVN 전체 펌웨어:
-- 계기판 및 HUD:
-
-## 소프트웨어 환경
-- NEMESIS 버전:
-- HMG-API 버전:
-- HMG-API Hooks 상태:
-- Phone Projection TBT 버전:
-- 다른 Phone Projection 모드:
-
-## 사용 환경
-- CarPlay / Android Auto:
-- 유선 / 무선:
-- 내비게이션 앱 및 버전:
-
-## 문제 설명
-- 기대한 동작:
-- 실제 동작:
-- 재현 방법:
-- 발생 시각:
-- 반복 발생 여부:
-
-## 첨부 자료
-- 개인정보를 가린 로그:
-- 화면 또는 계기판 사진:
-- 기타:
-```
-
----
-
-## 6. 호환성 확인 제보
-
-새로운 차량에서 정상 작동한 경우에도 Issue로 제보해 주세요.
-
-다음 정보가 특히 중요합니다.
-
-- 차종 및 연식
-- 국가 및 차종 코드
-- AVN 전체 펌웨어 버전
-- 계기판 및 HUD 종류
-- HMG-API 버전
-- Phone Projection TBT 버전
-- 사용한 내비게이션 앱
-- 유선·무선 연결 방식
-- 계기판 및 HUD 표시 결과
-
-정상 작동한 기능과 시험하지 않은 기능을 명확히 구분해 주세요.
-
-사용자 제보만으로 모든 앱과 기능의 호환성을 보장하지는 않습니다.
-
----
-
-## 7. 로그 첨부 전 확인 사항
-
-공개 전에 다음을 확인해 주세요.
-
-- [ ] 목적지 및 경유지 이름 제거
-- [ ] 도로명과 주소 등 민감한 경로 정보 마스킹
-- [ ] 위치 좌표 제거
-- [ ] 이동 경로를 추정할 수 있는 정보 확인
-- [ ] 개인 계정 및 식별 정보 제거
-- [ ] 차량 프레임워크 바이너리 제외
-- [ ] 개인 서명 키 및 비밀 정보 제외
-- [ ] 필요한 오류·함수 호출 정보 유지
-
-마스킹만으로 개인정보를 안전하게 제거할 수 없는 경우 로그 전체를 공개하지 않아도 됩니다.
-
----
-
-## 관련 문서
-
-- [[Troubleshooting]] — 문제 해결
-- [[Compatibility]] — 호환성 검증 및 제보
-- [[Known-Issues]] — 알려진 문제
-- [GitHub Issues](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/issues)
+[이슈 작성](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/issues/new/choose) · [[Troubleshooting]]

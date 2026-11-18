@@ -3,7 +3,7 @@ package hmgapi.mods.projection;
 final class AaNameChange {
  static final long DELAY_MS=3500;
  final long due;
- String text;int side,angle,number;boolean camera;
+ String text;int side,angle,number;boolean camera,conflictingDistance;
  int[] distance;
  AaNameChange(long now,String text,int side,int angle,int number){due=now+DELAY_MS;update(text,side,angle,number);}
  void update(String t,int s,int a,int n){text=t;side=s;angle=a;number=n;camera=cameraText(t);}

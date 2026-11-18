@@ -1,4 +1,4 @@
-# Building Phone Projection TBT 1.0.0
+# Building Phone Projection TBT 1.0.5
 
 Requires JDK 11+ (Java 8 bytecode target), Android API 19 android.jar, Android SDK d8, zip, and the HMG-API source tree. HMG-API is available at https://github.com/VysseCodes/HMG-API. The build expects its core/runtime/java and core/runtime/stubs directories. Release build checked against commit `9b57914818e93cf62887349b60dacbca83396bfe` (1.0.2 runtime).
 
@@ -26,10 +26,10 @@ The output is navigation-api/native/libstockgraph.so. The build uses the tested 
 
 ## Tests
 
-Java regression tests are under tests/. Compile against the app classes, Android API 19, runtime and source stubs. Run each package-qualified test main; NativePayloadTest takes native/prebuilt/libstockgraph.so as its argument. CompoundLoaderTest expects classes/ and tests/ output directories as siblings. Python tests exercise callback replay and exporter behavior with temporary data. They use the development layout (mod/, build-100/classes, runtime/, stubs/, android.jar); map the public root configuration/scripts and prebuilt helper into mod/ when running them. No private vehicle logs are required for the default test cases.
+Java regression tests are under tests/. Compile against the app classes, Android API 19, runtime and source stubs. Run each package-qualified test main; NativePayloadTest takes native/prebuilt/libstockgraph.so as its argument. CompoundLoaderTest expects classes/ and tests/ output directories as siblings. Python tests exercise callback replay and exporter behavior with temporary data. They use the development layout (mod/, build-105/classes, runtime/, stubs/, android.jar); map the public root configuration/scripts and prebuilt helper into mod/ when running them. No private vehicle logs are required for the default test cases.
 
 ## Installer
 
-The standard ZIP is the signed HMG-API update. A NEMESIS application wrapper includes this intact ZIP and the reviewed install/uninstall scripts from installer/. Build it with `python3 tools/build_application_package.py dist/phone-projection-tbt-1.0.0.zip dist/phone-projection-tbt-1.0.0-nemesis-package.zip`. tools/build_usb_installer.py wraps that application package in a separate type=install USB descriptor. Do not put an application descriptor directly at the USB root.
+The standard ZIP is the signed HMG-API update. A NEMESIS application wrapper includes this intact ZIP and the reviewed install/uninstall scripts from installer/. Build it with `python3 tools/build_application_package.py dist/phone-projection-tbt-1.0.5.zip dist/phone-projection-tbt-1.0.5-nemesis-package.zip`. tools/build_usb_installer.py wraps that application package in a separate type=install USB descriptor. Do not put an application descriptor directly at the USB root.
 
 All release ZIPs use stored entries for compatibility with the target ZIP reader. Verify the HMG-API signature and ZIP CRCs after packaging. Keep signing keys, raw captures and stock binaries out of source archives.

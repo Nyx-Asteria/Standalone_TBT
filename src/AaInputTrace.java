@@ -12,14 +12,14 @@ final class AaInputTrace {
  }
  static synchronized void output(Context context,Object[] args,Throwable error) {
   try {
-   String row="1.0.0\t"+SystemClock.elapsedRealtime()+"\t"+System.currentTimeMillis()+"\t"
+   String row="1.0.5\t"+SystemClock.elapsedRealtime()+"\t"+System.currentTimeMillis()+"\t"
        +java.util.Arrays.toString(args)+"\t"+(error==null?"completed":"error_"+error.getClass().getSimpleName())+"\n";
    append(context,"hmgapi-tbt-output.log",row);
   }catch(Exception ignored){}
  }
  static synchronized void record(Context context,String kind,Object[] args) {
   try {
-   String prefix="1.0.0\t"+SystemClock.elapsedRealtime()+"\t"+System.currentTimeMillis()+"\t";
+   String prefix="1.0.5\t"+SystemClock.elapsedRealtime()+"\t"+System.currentTimeMillis()+"\t";
    // EV_DUMP supplies the original S/P protobuf bytes as length + hex. Keep that
    // text verbatim, before AaStateText/AaNavigationState interpret its fields.
    if("turn".equals(kind)&&args.length>2&&Integer.valueOf(33).equals(args[2])&&args[0] instanceof String) {

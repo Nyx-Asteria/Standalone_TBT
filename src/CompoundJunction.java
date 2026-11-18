@@ -39,14 +39,49 @@ final class CompoundJunction {
   }
   return Double.NaN;
  }
- static float[] draw(long[] data,int target,double lon,double lat,int type,int junction,boolean hasExit,int exit,float meters,int limit){
+ /** A short incoming link may already be inside the verified four-node junction.
+  * Accept only that one extra chord, then recover a unique observed external approach.
+  * This contracts existing roads; it does not infer an island or add an arm. */
+ static CompoundGeometry.Graph externalApproach(CompoundGeometry.Graph g,Set<String> ring,double heading) {
+  if(g.kind!=0)return null;
+  Set<String> vertices=new HashSet<String>();double total=0;
+  for(String id:ring){CompoundGeometry.Edge e=g.edges.get(id);vertices.add(e.a);vertices.add(e.b);total+=e.raw[3];}
+  CompoundGeometry.Edge in=g.edges.get(g.incoming);
+  if(!vertices.contains(in.a)||!vertices.contains(in.b)||ring.contains(in.id)||vertices.size()>4)return null;
+  if(total+in.raw[3]>200)return null;
+  for(String v:vertices)if(!g.queried.contains(v))return null;
+  for(CompoundGeometry.Edge e:g.edges.values())if(vertices.contains(e.a)&&vertices.contains(e.b)){
+   if((!ring.contains(e.id)&&!e.id.equals(in.id))||e.raw[13]!=0||e.raw[14]!=0)return null;
+  }
+  CompoundGeometry.Edge approach=null;String entry=null;int arms=0;
+  for(CompoundGeometry.Edge e:g.edges.values()){
+   boolean a=vertices.contains(e.a),b=vertices.contains(e.b);if(a==b)continue;
+   if(e.raw[13]!=0||e.raw[14]!=0)return null;
+   arms++;String at=a?e.a:e.b;
+   if(Math.abs(angle(bearing(e.near(at),e.point(at))-heading))<=30){
+    if(approach!=null)return null;approach=e;entry=at;
+   }
+  }
+  if(arms<3||approach==null)return null;
+  // The observed chord must lead directly back to the external entry. Its length
+  // is already included in the forward distance and must be removed exactly once.
+  if(!entry.equals(in.other(g.root))||g.distance<in.raw[3])return null;
+  CompoundGeometry.Graph out=new CompoundGeometry.Graph();
+  out.edges.putAll(g.edges);out.queried.addAll(g.queried);out.kind=g.kind;out.target=g.target;
+  out.root=entry;out.incoming=approach.id;long[] pt=approach.point(entry);
+  out.x=pt[0];out.y=pt[1];out.approach=bearing(approach.near(entry),pt);
+  out.distance=g.distance-in.raw[3];ring.add(in.id);return out;
+ }
+ static float[] draw(long[] data,int target,double lon,double lat,int type,int junction,boolean hasExit,int exit,float meters,int limit,double heading){
   reason="compound-invalid";node=null;CompoundGeometry.Graph g=CompoundGeometry.decode(data);
   if(g==null||g.target!=target)return fail("compound-target-or-format");
   boolean rotary=junction==1||type==6||type==7;
   double tolerance=Math.max(15,Math.min(40,meters*.10));
+  Set<String> cycle=CompoundGeometry.cycle(g);if(cycle==null)return fail(CompoundGeometry.lastReason);
+  boolean entryCorrected=false;
+  if(!rotary){CompoundGeometry.Graph corrected=externalApproach(g,cycle,heading);if(corrected!=null){g=corrected;entryCorrected=true;}}
   if(!rotary&&Math.abs(g.distance-meters)>tolerance)return fail("compound-distance-mismatch");
   if(StockMapJunction.distance(lon,lat,g.x/360000.0,g.y/360000.0)>meters+40)return fail("compound-node-too-far");
-  Set<String> cycle=CompoundGeometry.cycle(g);if(cycle==null)return fail(CompoundGeometry.lastReason);
   if(rotary!=(g.kind==1))return fail("compound-maneuver-kind");
   if(rotary&&!hasExit)return fail("rotary-route-exit-unknown");
   HashSet<String> vertices=new HashSet<String>();double cx=0,cy=0;
@@ -102,7 +137,7 @@ final class CompoundJunction {
   double radius=0;
   for(String key:vertices){String[] xy=key.split(":");radius=Math.max(radius,StockMapJunction.distance(centre[0]/360000.0,centre[1]/360000.0,Long.parseLong(xy[0])/360000.0,Long.parseLong(xy[1])/360000.0));}
   node=g.edges.get(g.incoming).raw[0]+":"+centre[0]+":"+centre[1]+":"+(int)Math.ceil(radius);
-  reason=rotary?"physical-rotary-arms":"physical-island-arms";
+  reason=rotary?"physical-rotary-arms":entryCorrected?"physical-compound-entry-corrected":"physical-island-arms";
   return new float[]{rotary?32:13,roads,selectedDirection,meters,0,0,0,PhoneJunction.barLevel(meters,limit),0};
  }
 }

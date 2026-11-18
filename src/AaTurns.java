@@ -88,11 +88,14 @@ final class AaTurns {
 
     private final hmgapi.mods.projection.carplay.FacilityContext facilityContext=new hmgapi.mods.projection.carplay.FacilityContext();
     private AaNameChange pendingNameChange;
+    private final AaDistanceGuard distanceGuard=new AaDistanceGuard();
     private boolean committingNameChange;
     private final Runnable settleNameChange=new Runnable(){public void run(){
         AaNameChange change=pendingNameChange;pendingNameChange=null;
         if(change==null || !navLive)return;
-        if(change.camera){traceOutput("notification ignored camera=true");return;}
+        if(change.camera||change.conflictingDistance){
+            traceOutput("notification ignored camera="+change.camera+" conflictingDistance="+change.conflictingDistance);return;
+        }
         committingNameChange=true;
         try {
             nextTurn(change.text,change.side,NAME_CHANGE,change.angle,change.number);
@@ -131,6 +134,8 @@ final class AaTurns {
             if (str != null && str.startsWith("S ")) {
                 pendingRoad = AaStateText.currentRoad(str);
                 pendingInstruction=AaStateText.currentInstruction(str);
+                if(AaNameChange.cameraText(pendingRoad)||AaNameChange.cameraText(pendingInstruction))
+                    distanceGuard.camera(SystemClock.elapsedRealtime());
                 AaNavigationState state = AaNavigationState.decode(str);
                 if (state != null) {
                     rawCurrentIcon=state.currentIcon;
@@ -201,6 +206,7 @@ final class AaTurns {
             str = pendingRoad;
             pendingRoad = null;
         }
+        if(AaNameChange.cameraText(str))distanceGuard.camera(SystemClock.elapsedRealtime());
         boolean sameManeuver=hasCurrentTurn&&ev==event&&side==turnSide&&angle==turnAngle&&!AaNameChange.cameraText(str);
         boolean auxiliaryLabel=facilityContext.recent(SystemClock.elapsedRealtime())&&hmgapi.mods.projection.carplay.FacilityContext.auxiliary(str);
         if(!committingNameChange && !sameManeuver && !auxiliaryLabel && AaNameChange.defer(ev,side,hasCurrentTurn,
@@ -218,6 +224,7 @@ final class AaTurns {
         facilityInstruction=pendingInstruction;pendingInstruction=null;
         int previousEvent=event;
         if(hasCurrentTurn&&(ev!=event||side!=turnSide||angle!=turnAngle)&&!auxiliaryLabel)waitingEnlargementDistance=true;
+        if(hasCurrentTurn&&(ev!=event||side!=turnSide||angle!=turnAngle)&&!AaNameChange.cameraText(str))distanceGuard.reset();
         event = ev;
         road = str;
         turnSide = side;
@@ -295,8 +302,14 @@ final class AaTurns {
             return;
         }
         if(pendingNameChange!=null) {
+            // A directionless notice is not evidence of a new maneuver. Do not let
+            // its timeout reset the route guard and admit a physically conflicting distance.
+            if(distanceGuard.implausibleDrop(meters,SystemClock.elapsedRealtime()))pendingNameChange.conflictingDistance=true;
             pendingNameChange.distance=new int[]{meters,seconds,e3,unitFlags};
             traceOutput("notification distance held meters="+meters);return;
+        }
+        if(!distanceGuard.accept(meters,SystemClock.elapsedRealtime())) {
+            traceOutput("camera-overlay distance rejected meters="+meters);return;
         }
         waitingEnlargementDistance=false;
         hasCurrentDistance = true;
@@ -309,6 +322,7 @@ final class AaTurns {
     void status(int s) {
         if (s == 1 || s == 3) {   // active, rerouting
             boolean starting = !navLive;
+            if(s==3)distanceGuard.reset();
             navLive = true;
             // Callbacks can arrive before active status on the first connection.
             // Replay only a complete cached current turn, never fabricate 0 m.
@@ -337,7 +351,7 @@ final class AaTurns {
 
     /** The car's navigation took over (focus native): forget the turn. */
     void stop() {
-        clearNameChange();
+        clearNameChange();distanceGuard.reset();
         handler.removeCallbacks(enlargementTick);
         if(enlargement!=null)enlargement.clear();
         hasCurrentTurn = false;
@@ -747,7 +761,7 @@ final class AaTurns {
             hour = c.get(Calendar.HOUR_OF_DAY);
             minute = c.get(Calendar.MINUTE);
             timeType = 1;
-            timeFormat = 2;
+            timeFormat = hmgapi.mods.projection.carplay.DisplayFormat.arrivalFormat(diagnostics==null?"24":diagnostics.settingString("arrival_time_format","24"),context);
         }
         cluster.tbtSubInfo(hmgapi.mods.projection.carplay.DisplayFormat.distance(whole + tenths / 10f,cu), 0, cu, hour, minute, timeType, timeFormat, 0f, -1, estPoint);
         scheduleTick();

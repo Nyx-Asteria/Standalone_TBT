@@ -8,8 +8,9 @@ final class RoundaboutEnlargement {
   if(!StockMapJunction.allowedApp(app) || (junction!=1 && type!=6 && type!=7)
       || side!=0 || !hasExit || exit< -180 || exit>180 || threshold<=0
       || Float.isNaN(meters) || Float.isInfinite(meters) || meters<=0 || meters>threshold)return null;
+  if(angles==null||angles.length==0)return null;
   int roads=0;
-  // Native SetCaseRotary also accepts a missing mask and uses its direction fallback.
+  // A zero branch mask produces a bare ring on the tested cluster.
   // If the phone does supply topology, include only its real, representable arms.
   if(angles!=null && angles.length>0 && angles.length<=16) {
    for(int angle:angles) {
@@ -18,6 +19,7 @@ final class RoundaboutEnlargement {
    }
    roads|=PhoneJunction.roadBit(exit);
   }
+  if(roads==0)return null;
   return new float[]{32,roads,(exit+360)%360,meters,0,0,0,
       PhoneJunction.barLevel(meters,threshold),0};
  }

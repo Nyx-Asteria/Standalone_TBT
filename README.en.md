@@ -1,19 +1,37 @@
-# HMG Phone Projection TBT 1.0.0
+# HMG Phone Projection TBT 1.0.5
 
-[한국어](README.md) · [Compatibility](COMPATIBILITY.md) · [Wiki](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/wiki) · [Releases](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/releases/latest)
+[한국어](README.md) · [Download](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/releases/tag/v1.0.5) · [Compatibility](COMPATIBILITY.md) · [Wiki](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/wiki)
 
-HMG-API mod forwarding CarPlay and Android Auto navigation to Hyundai/Kia Gen5W clusters and HUDs. Supports current/next maneuvers, distance, road names, trip information and available lane data. Stock-map junction enlargement remains an optional experimental feature.
+An HMG-API mod that forwards CarPlay and Android Auto navigation to Hyundai/Kia Gen5W instrument clusters and HUDs: current/upcoming turns, distances, road and destination names, and supplied lane guidance. Stock-map junction enlargement is an optional experimental feature.
 
-Requires HMG-API 1.0.2+, a matching vehicle map and `Hooks on (map checked)`. Disable duplicate TBT output in Korea Projection when using both mods.
+## Changes since 1.0.0
 
-For a first installation, extract the USB-install ZIP and place its NEMESIS.data and intact inner ZIP together at the USB root. For updates, place the intact standard update ZIP in HMGAPI/updates/. Restart the head unit after applying.
+- Keep real turn guidance when a directionless AA notice contains a conflicting short distance.
+- Correct the external approach of a fully observed small junction with a short internal link.
+- Fall back to ordinary rotary guidance when enlargement branches are missing.
+- Reapply toll display state even when its bar level and name are unchanged.
+- Select 12-hour, 24-hour or vehicle-system arrival-time formatting.
+- Remove the 1.0.4 CN7 PE cluster start-handshake trial.
 
-Version 1.0.0 includes subscription recovery, enlargement linkage-error containment, stable maneuver tracking across label/index changes, Korean AA ramp handling, immediate same-maneuver text updates, the restored 10-o'clock left-fork icon, and toll/ramp/roundabout rendering improvements. ETA requests use 24-hour time; distances of 10 km or more are sent as integral values. A cluster may still render a trailing .0.
+## Installation
 
-See [release notes](RELEASE-v1.0.0.md) and [compatibility](COMPATIBILITY.md). Historical vehicle reports cover different feature subsets. Latest toll, off-ramp and roundabout fixes passed host replay tests and still require vehicle validation. Unknown engine hashes skip stock-map queries and retain basic TBT.
+Requires HMG-API >=1.0.2, a matching vehicle map, and `Hooks on (map checked)`.
 
-Most listed vehicles also have user-reported enlargement operation; special diagrams and individual road conditions are tracked separately.
+- Existing installation: place `phone-projection-tbt-1.0.5.zip` unopened in USB `HMGAPI/updates/`, apply and restart.
+- First installation: extract `phone-projection-tbt-1.0.5-usb-install.zip`; put `NEMESIS.data` and its inner application ZIP at the USB root. Do not extract the inner ZIP.
+- NEMESIS application: `phone-projection-tbt-1.0.5-nemesis-package.zip`.
+- Source/checksums: `phone-projection-tbt-1.0.5-source.zip` and `phone-projection-tbt-1.0.5-SHA256SUMS.txt`.
 
-Additional vehicle report: a 2021 K7 Premier 2.5 (YGPE, 260902) owner confirmed v1.0.0 operation with wireless CarPlay and NAVER Map; K7 junction enlargement is pending additional confirmation (maintainer clarification, 2026-11-17). The vehicle has no HUD. This does not validate every special diagram. [Issue #4](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/issues/4).
+Disable duplicate TBT senders in other projection mods. See [installation](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/wiki/Installation).
 
-[Build instructions](BUILD.md). AGPL-3.0; see [notices](NOTICE.txt). Private logs, stock navigation engines, firmware and signing keys are excluded. JNI helper source is included under navigation-api/native.
+## Settings and limits
+
+Settings cover AA guidance, optional junction enlargement, road/speed enlargement thresholds, experimental toll display and arrival-time formatting. Apply and restart after a setting change. Leading-zero hour selection (`H:MM` vs `HH:MM`) and hiding the trailing `.0` in 10–100km displays are not supported. Integer distance values are transmitted above 10km; the cluster controls text formatting.
+
+39 Java and 10 Python suites, real-input replays, D8 conversion, signatures and ZIP validation passed. Host tests do not replace vehicle testing. See [compatibility](COMPATIBILITY.md) for model-specific reports, including K8 GL3 HEV AA cluster enlargement and HUD operation.
+
+## Logs and source
+
+Create `TBT-LOGS` at the USB root before reproducing an issue, then collect the entire generated folder with the app, connection type and symptom time. Check location information before sharing publicly. [Log guide](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/wiki/Logs-and-Issue-Reporting).
+
+AGPL-3.0. See [build instructions](BUILD.md) and [notices](NOTICE.txt). Proprietary engines, raw vehicle captures, firmware and signing keys are excluded. The project-owned JNI helper source is in `navigation-api/native`.

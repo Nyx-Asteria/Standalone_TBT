@@ -27,6 +27,6 @@ with tempfile.TemporaryDirectory() as tmp:
  }}'''}
  for path,code in src.items():
   f=p/path;f.parent.mkdir(parents=True,exist_ok=True);f.write_text(code)
- cp=str(r/'build-100/classes')
+ cp=str(r/'build-105/classes')
  subprocess.run(['javac','--release','8','-Xlint:-options','-cp',cp,'-d',str(p),*[str(p/x) for x in src]],check=True)
  subprocess.run(['java','-cp',str(p)+':'+cp,'hmgapi.mods.projection.AaInputTraceTest',str(data)],check=True)

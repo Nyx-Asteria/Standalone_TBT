@@ -79,6 +79,10 @@ sources={
   int names=Cluster.names;
   context.sendBroadcast(new Intent(ProjectionBar.ACTION).putExtra(ProjectionBar.EXTRA_BAR,40).putExtra(ProjectionBar.EXTRA_TOLL,1).putExtra(ProjectionBar.EXTRA_NAME,"2,200원"));Handler.until(368600);
   ok(Cluster.names>names&&"2,200원".equals(Cluster.lastName));
+  // A same-value heartbeat must reapply the full toll state after an icon update.
+  names=Cluster.names;int frames=Fake.sent.size();
+  context.sendBroadcast(new Intent(ProjectionBar.ACTION).putExtra(ProjectionBar.EXTRA_BAR,40).putExtra(ProjectionBar.EXTRA_TOLL,1).putExtra(ProjectionBar.EXTRA_NAME,"2,200원"));Handler.until(368900);
+  ok(Cluster.names>names&&Fake.sent.size()>=frames+2&&last(0)[4]==1&&last(1)[4]==1);
  // timeout restores toll state as well
   System.out.println("Actual trap gauge integration: both APIs, original fields/objects, independent restoration, throttle/burst, concurrent camera update, expiry, missing/invalid stock and package-targeted relay passed");
  }
@@ -88,6 +92,6 @@ with tempfile.TemporaryDirectory(prefix='tbt-gauge-') as tmp:
  p=Path(tmp)
  for name,code in sources.items():
   f=p/name;f.parent.mkdir(parents=True,exist_ok=True);f.write_text(code)
- cp=str(root/'build-100/classes')
+ cp=str(root/'build-105/classes')
  subprocess.run(['javac','--release','8','-Xlint:-options','-cp',cp,'-d',str(p),*[str(p/n) for n in sources]],check=True)
  subprocess.run(['java','-cp',str(p)+':'+cp,'hmgapi.mods.projection.GaugeReplay'],check=True)
