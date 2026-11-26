@@ -1,6 +1,6 @@
-# Building Phone Projection TBT 1.0.5
+# Building Standalone TBT
 
-Requires JDK 11+ (Java 8 bytecode target), Android API 19 android.jar, Android SDK d8, zip, and the HMG-API source tree. HMG-API is available at https://github.com/VysseCodes/HMG-API. The build expects its core/runtime/java and core/runtime/stubs directories. Release build checked against commit `9b57914818e93cf62887349b60dacbca83396bfe` (1.0.2 runtime).
+Requires JDK 11+ (Java 8 bytecode target), Android API 19 android.jar, Android SDK d8, zip, and the HMG-API source tree. HMG-API is available at https://github.com/VysseCodes/HMG-API. The build expects its core/runtime/java and core/runtime/stubs directories. Upstream 1.0.5 release build checked against commit `9b57914818e93cf62887349b60dacbca83396bfe` (1.0.2 runtime).
 
 ```sh
 export HMG_API=/path/to/HMG-API
@@ -10,7 +10,7 @@ export SIGNING_KEY=/private/path/to/author.key
 ./build.sh
 ```
 
-The standard update ZIP appears under dist/. The author key is not included. A differently signed build cannot replace the maintainer-signed installation without the appropriate uninstall/reinstall procedure. Do not change the installed mod identity to bypass signature checks.
+The standard update ZIP appears under dist/standalone-tbt-<version>.zip. The fork uses a distinct mod ID and must be signed with its own configured author key; remove upstream TBT before installation. No fork build has yet been verified. The author key is not included. A differently signed build cannot replace the maintainer-signed installation without the appropriate uninstall/reinstall procedure. Do not change the installed mod identity to bypass signature checks.
 
 ## Native helper
 
@@ -30,6 +30,6 @@ Java regression tests are under tests/. Compile against the app classes, Android
 
 ## Installer
 
-The standard ZIP is the signed HMG-API update. A NEMESIS application wrapper includes this intact ZIP and the reviewed install/uninstall scripts from installer/. Build it with `python3 tools/build_application_package.py dist/phone-projection-tbt-1.0.5.zip dist/phone-projection-tbt-1.0.5-nemesis-package.zip`. tools/build_usb_installer.py wraps that application package in a separate type=install USB descriptor. Do not put an application descriptor directly at the USB root.
+The standard ZIP is the signed HMG-API update. A NEMESIS application wrapper includes this intact ZIP and the reviewed install/uninstall scripts from installer/. Build it with `python3 tools/build_application_package.py dist/standalone-tbt-1.0.5.zip dist/standalone-tbt-1.0.5-nemesis-package.zip`. tools/build_usb_installer.py wraps that application package in a separate type=install USB descriptor. Do not put an application descriptor directly at the USB root.
 
 All release ZIPs use stored entries for compatibility with the target ZIP reader. Verify the HMG-API signature and ZIP CRCs after packaging. Keep signing keys, raw captures and stock binaries out of source archives.
