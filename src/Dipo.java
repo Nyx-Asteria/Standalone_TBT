@@ -143,9 +143,14 @@ public final class Dipo {
     // Verified against the US DL322 com.tcc.iap2.odex Binder signatures.
     // Reflection keeps older compile-time stubs and firmware variants compatible.
     private static int traceComponents(IIap2Service service, String reason) {
+        int count = -1;
         try {
             Class<?> api = IIap2Service.class;
-            int count = ((Number)api.getMethod("Iap2SvcGetRouteGuidanceRegisteredComponentCount").invoke(service)).intValue();
+            count = ((Number)api.getMethod("Iap2SvcGetRouteGuidanceRegisteredComponentCount").invoke(service)).intValue();
+            if (count == 0) {
+                log("CarPlay registered guidance components reason=" + reason + " count=0");
+                return count;
+            }
             int selected = ((Number)api.getMethod("Iap2SvcGetRouteGuidanceComponentIdByName", String.class)
                     .invoke(service, RG_COMPONENTS[0])).intValue();
             log("CarPlay registered guidance components reason=" + reason + " count=" + count
@@ -160,8 +165,8 @@ public final class Dipo {
                     + java.util.Arrays.toString(ids) + " names=" + java.util.Arrays.toString(names));
             return count;
         } catch (Exception e) {
-            log("CarPlay guidance component enumeration unavailable: " + e);
-            return -1;
+            log("CarPlay guidance component enumeration unavailable count=" + count + ": " + e);
+            return count;
         }
     }
 
