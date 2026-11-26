@@ -1272,13 +1272,10 @@ final class CpTurns {
                 }
             }
             final int currentIndex = list == null || list.length == 0 ? -1 : list[0];
-            if (previousIndex != currentIndex) {
-                if (!numericReceived) hasNextDistance = false;
-                if (!formattedReceived || !unitsReceived) nextStr = "";
-            } else if (numericReceived && !formattedReceived) {
-                // A fresh numeric countdown supersedes a cached formatted value.
-                nextStr = "";
-            }
+            if (!CpDistancePolicy.retainNumeric(previousIndex, currentIndex, numericReceived))
+                hasNextDistance = false;
+            if (!CpDistancePolicy.retainFormatted(previousIndex, currentIndex,
+                    numericReceived, formattedReceived, unitsReceived)) nextStr = "";
             if (list != null) {
                 listCountAtSelection = list == null ? 0 : count;
             }
