@@ -1,6 +1,8 @@
 package hmgapi.mods.projection.carplay;
 
 import android.content.ComponentName;
+import android.content.BroadcastReceiver;
+import android.content.IntentFilter;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
@@ -18,6 +20,7 @@ import hmgapi.hook.Cluster;
 import hmgapi.hook.LoadedApp;
 import hmgapi.hook.MethodHook;
 import hmgapi.hook.ModContext;
+import hmgapi.hook.Points;
 
 public final class Dipo {
     private Dipo() {}
@@ -35,6 +38,9 @@ public final class Dipo {
     static Handler turnsHandler;
     static CpTurns turns;
     static RgListener rg;
+    private static final CpSessionLifecycle session = new CpSessionLifecycle();
+    private static long lastSubscriptionAt = -10000;
+    private static int lastSubscriptionGeneration = -1;
     /** set while HMG-API itself calls the iAP2 server (its own route guidance restart) */
     static final ThreadLocal<Boolean> OWN = new ThreadLocal<Boolean>();
 
@@ -60,25 +66,35 @@ public final class Dipo {
         app = a;
         turnByTurn();
         if (!tbt) return;
-        mod.hook(app.classLoader, "dipo.carplay.session_started", new MethodHook() {
-            @Override
-            protected void afterHookedMethod(Param p) {
-                turnsHandler.postDelayed(new Runnable() {
-                    @Override
-                    public void run() {
-                        IIap2Service service = iap2;
-                        if (service == null) {
-                            log("CarPlay: session started before iAP2 binding");
-                            return;
-                        }
-                        try {
-                            log("CarPlay: session route update request=" +
-                                    service.Iap2SvcStartRouteGuidanceUpdate(RG_COMPONENTS, true, true));
-                        } catch (Exception e) {
-                            error("CarPlay: session route update request", e);
-                        }
+        // Use lifecycle tracking only when the matching finalization hook is available.
+        // Otherwise retain the upstream disconnect behavior on older maps.
+        final boolean lifecycle = Points.has("dipo.carplay.session_finalized");
+        if (lifecycle) {
+            mod.hook(app.classLoader, "dipo.carplay.session_finalized", new MethodHook() {
+                @Override protected void beforeHookedMethod(Param p) {
+                    session.end();
+                    post(new Runnable() { public void run() {
+                        if (!session.active()) turns.disconnected();
+                    }});
+                }
+            });
+            try {
+                a.context.registerReceiver(new BroadcastReceiver() {
+                    @Override public void onReceive(Context c, Intent i) {
+                        if ("com.tcc.iap2.connectedsuccess".equals(i.getAction())
+                                && i.getIntExtra("com.telechips.android.iap2.component", -1) == 5
+                                && session.wireless()) requestSubscription("component 5 authenticated", 0);
                     }
-                }, 1000);
+                }, new IntentFilter("com.tcc.iap2.connectedsuccess"));
+            } catch (RuntimeException e) {
+                error("CarPlay: component 5 observer unavailable", e);
+            }
+        }
+        mod.hook(app.classLoader, "dipo.carplay.session_started", new MethodHook() {
+            @Override protected void afterHookedMethod(Param p) {
+                if (p.hasThrowable()) return;
+                session.start(Integer.valueOf(1).equals(p.args[0]), lifecycle);
+                requestSubscription("session started", 1000);
             }
         });
         Intent i = new Intent(IAP2_ACTION);
@@ -87,7 +103,10 @@ public final class Dipo {
             public void onServiceConnected(ComponentName name, IBinder b) {
                 IIap2Service s = IIap2Service.Stub.asInterface(b);
                 iap2 = s;
-                if (tbt) registerRouteGuidance(s);
+                if (tbt) {
+                    registerRouteGuidance(s);
+                    if (session.active()) requestSubscription("iAP2 bound", 0);
+                }
             }
 
             @Override
@@ -103,6 +122,26 @@ public final class Dipo {
             }
         }, Context.BIND_AUTO_CREATE);
         log("DiPO: iAP2 server " + (bound ? "binding" : "can't be bound"));
+    }
+
+    // Serialized on the guidance worker; never perform a Binder request in a stock callback.
+    private static void requestSubscription(final String reason, long delay) {
+        final int generation = session.generation();
+        turnsHandler.postDelayed(new Runnable() {
+            @Override public void run() {
+                if (!mod.enabled() || !session.current(generation)) return;
+                IIap2Service service = iap2;
+                if (service == null) return; // onServiceConnected handles a late bind
+                long now = android.os.SystemClock.elapsedRealtime();
+                if (lastSubscriptionGeneration == generation && now - lastSubscriptionAt < 750) return;
+                lastSubscriptionGeneration = generation;
+                lastSubscriptionAt = now;
+                try {
+                    log("CarPlay: " + reason + " route update request=" +
+                            service.Iap2SvcStartRouteGuidanceUpdate(RG_COMPONENTS, true, true));
+                } catch (Throwable e) { error("CarPlay: " + reason + " route update request", e); }
+            }
+        }, delay);
     }
 
     private static void turnByTurn() {
@@ -202,11 +241,11 @@ public final class Dipo {
         @Override
         public void disconnected(final int component) {
             // as DiPO's listener: component 2 isn't a session, and the bridge's own sessions end while wireless CarPlay runs
-            if (component == 2) return;
+            if (session.ignoreDisconnect(component)) return;
             post(new Runnable() {
                 @Override
                 public void run() {
-                    turns.disconnected();
+                    if (!session.ignoreDisconnect(component)) turns.disconnected();
                 }
             });
         }
