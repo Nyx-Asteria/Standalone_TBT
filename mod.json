@@ -30,7 +30,8 @@
       ],
       "libautoreceiver_infobank.so": [
         "recipes/aa-tbt-48ee793a.recipe",
-        "recipes/aa-tbt-a0bea1c4.recipe"
+        "recipes/aa-tbt-a0bea1c4.recipe",
+        "recipes/aa-tbt-dbfe7bd2.recipe"
       ]
     }
   },
