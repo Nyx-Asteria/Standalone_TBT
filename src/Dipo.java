@@ -43,11 +43,7 @@ public final class Dipo {
     private static int lastSubscriptionGeneration = -1;
     private static int experimentalStartupGeneration = -1;
     private static int receivedPacketGeneration = -1;
-    private static int experimentalWazeGeneration = -1;
-    private static String experimentalSource;
-    private static boolean experimentalWazePending;
-    private static int experimentalWazeAttempts;
-    private static int experimentalSourceEpoch;
+    private static final CpWazeRecovery wazeRecovery = new CpWazeRecovery();
     /** set while HMG-API itself calls the iAP2 server (its own route guidance restart) */
     static final ThreadLocal<Boolean> OWN = new ThreadLocal<Boolean>();
 
@@ -202,36 +198,22 @@ public final class Dipo {
     }
 
     static void experimentalSourceChanged(String source) {
-        experimentalSource = source;
-        experimentalSourceEpoch++;
-        experimentalWazePending = false;
-        experimentalWazeAttempts = 0;
-        experimentalWazeGeneration = session.generation();
+        wazeRecovery.sourceChanged(session.generation(), source);
     }
 
     static void experimentalIncompleteWaze(String source, boolean missing, boolean explicitlyUnsupported) {
-        if (!experimentalEnabled()) return;
-        int generation = session.generation();
-        if (experimentalWazeGeneration != generation
-                || !(source == null ? experimentalSource == null : source.equals(experimentalSource))) experimentalSourceChanged(source);
-        if (source == null || !source.toLowerCase(java.util.Locale.ROOT).contains("waze")
-                || !missing || explicitlyUnsupported) {
-            if (experimentalWazePending) experimentalSourceEpoch++;
-            experimentalWazePending = false;
-            return;
-        }
-        if (!session.current(generation) || experimentalWazePending || experimentalWazeAttempts >= 2) return;
-        experimentalWazePending = true;
-        final int token = generation, epoch = experimentalSourceEpoch;
+        if (!experimentalEnabled()) { wazeRecovery.cancel(); return; }
+        final int generation = session.generation();
+        if (!session.current(generation)) { wazeRecovery.cancel(); return; }
+        final int token = wazeRecovery.observe(generation, source, missing, explicitlyUnsupported);
+        if (token < 0) return;
         turnsHandler.postDelayed(new Runnable() { public void run() {
-            if (experimentalSourceEpoch != epoch || !session.current(token)) return;
-            experimentalWazePending = false;
-            if (!experimentalEnabled()) return;
-            experimentalWazeAttempts++;
-            requestSubscription("experimental Waze incomplete guidance attempt=" + experimentalWazeAttempts, 0);
-            // A missing reply must not prevent the second bounded attempt.
-            experimentalIncompleteWaze(experimentalSource, true, false);
-        }}, experimentalWazeAttempts == 0 ? 3000 : 7000);
+            if (!session.current(generation) || !experimentalEnabled()) return;
+            int attempt = wazeRecovery.fire(generation, token);
+            if (attempt == 0) return;
+            requestSubscription("experimental Waze incomplete guidance attempt=" + attempt, 0);
+            experimentalIncompleteWaze(wazeRecovery.source(), true, false);
+        }}, wazeRecovery.delay());
     }
 
     private static void turnByTurn() {
