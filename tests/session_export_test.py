@@ -15,6 +15,11 @@ with tempfile.TemporaryDirectory(prefix="session-export-") as tmp:
     (focused / "session-mapquest.active").write_text("START MapQuest\n")
     usb = p / "storage" / "usb0"
     usb.mkdir(parents=True)
+    binpath = p / "bin"
+    binpath.mkdir()
+    cmp = binpath / "cmp"
+    cmp.write_text('#!/bin/sh\ncase "$1" in -*) echo "cmp: invalid option" >&2; exit 2;; esac\nexec /usr/bin/cmp "$@"\n')
+    cmp.chmod(0o755)
     mounts = p / "mounts"
     mounts.write_text("")
     (source / "session-100.log").write_text("START\nEND\n")
@@ -30,7 +35,7 @@ with tempfile.TemporaryDirectory(prefix="session-export-") as tmp:
     script = script.replace("    sleep 5\n", "    break\n")
     assert "    break\n" in script
     def run():
-        subprocess.run(["sh", "-c", script], check=True, timeout=10)
+        subprocess.run(["sh", "-c", script], env={**os.environ, "PATH":str(binpath)+":"+os.environ["PATH"]}, check=True, timeout=10)
     run()
     assert not focused_dest.exists()
     assert not dest.exists(), "unmounted path must not receive files"
