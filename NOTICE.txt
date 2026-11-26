@@ -6,3 +6,6 @@ ProjectionBar, ProjectionTrapBar and TrapArgs adapted from StopDragon/HMG-API Ph
 https://github.com/StopDragon/HMG-API/tree/6b7211051f9d5edddf1b627fc92d71719bb6aa98/mods/wireless-carplay-aa/src/hmgapi/mods/wireless
 
 AA Korean ramp selectors and same-maneuver text update behavior compared against StopDragon/HMG-API korea-build AaTurns.java (AGPL-3.0), inspected 2026-11-17.
+
+AA native recipe UTF-8 correction, Canadian CEEV recipe and AaTbtSupport adapted from Open-HMG/hmgapi-wireless-cp-aa (AGPL-3.0).
+https://github.com/Open-HMG/hmgapi-wireless-cp-aa
