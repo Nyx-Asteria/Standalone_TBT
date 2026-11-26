@@ -64,6 +64,14 @@
           "title": "Match vehicle time settings"
         }
       ]
+    },
+    {
+      "key": "experimental_waze_recovery",
+      "type": "toggle",
+      "default": false,
+      "apply": "restart",
+      "title": "Experimental Waze guidance recovery",
+      "description": "Retry the CarPlay guidance subscription when Waze is identified but maneuver data is missing. Also retry once after a silent CarPlay connection. Does not fabricate directions or override phone capabilities."
     }
   ]
 }
