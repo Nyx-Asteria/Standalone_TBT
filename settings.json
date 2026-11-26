@@ -6,32 +6,32 @@
       "type": "toggle",
       "default": true,
       "apply": "restart",
-      "title": "Android Auto 길안내",
-      "description": "Android Auto의 길안내를 계기판에 표시합니다. 다른 모드의 TBT 기능과 동시에 켜지 마세요."
+      "title": "Android Auto turn-by-turn",
+      "description": "Show Android Auto navigation on the instrument cluster. Do not enable TBT in another mod at the same time."
     },
     {
       "key": "stock_map_junction",
       "type": "toggle",
       "default": true,
       "apply": "restart",
-      "title": "CarPlay / Android Auto 확대 안내 · 시험",
-      "description": "앱 제한 없이 확대 안내를 사용합니다. 순정 도로 형상과 폰의 방향·거리가 맞는 경우 표시합니다. 회전교차로는 수신된 진출 각도를 사용합니다. 정보가 부족하면 일반 TBT를 유지합니다."
+      "title": "CarPlay / Android Auto junction enlargement (experimental)",
+      "description": "Enable enlarged guidance for any navigation app when stock road geometry matches the phone's direction and distance. Roundabouts use the received exit angle. If data is insufficient, retain normal TBT."
     },
     {
       "key": "phone_junction_distance",
       "type": "choice",
       "default": "road",
       "apply": "restart",
-      "title": "확대 안내 시작 거리",
-      "description": "일반 도로·고속도로 진출입 기준 또는 속도별 기준을 선택합니다. 도로 형상을 확인하지 못한 구간에서는 일반 TBT를 표시합니다.",
+      "title": "Junction enlargement start distance",
+      "description": "Choose road-type or speed-based thresholds. Normal TBT remains active where road geometry cannot be verified.",
       "options": [
         {
           "value": "road",
-          "title": "일반400m / 고속도로 진출입1050m"
+          "title": "Local roads: 400 m / highway ramps: 1,050 m"
         },
         {
           "value": "speed",
-          "title": "속도별100 / 400 / 500m"
+          "title": "Speed-based: 100 / 400 / 500 m"
         }
       ]
     },
@@ -40,28 +40,28 @@
       "type": "toggle",
       "default": true,
       "apply": "restart",
-      "title": "요금소 접근 표시 · 시험",
-      "description": "요금소로 식별된 안내가 1km 미만이면 순정 요금소 표시 상태와 거리 막대 값을 함께 보냅니다. 앱이 요금소 정보를 보내지 않으면 식별하지 못할 수 있습니다."
+      "title": "Toll plaza approach display (experimental)",
+      "description": "When a maneuver is identified as a toll plaza within 1 km, send the stock toll display state and distance bar. Identification may fail if the app supplies no toll information."
     },
     {
       "key": "arrival_time_format",
       "type": "choice",
       "default": "24",
       "apply": "restart",
-      "title": "도착 예정 시간 표시",
-      "description": "12시간·24시간·차량 설정 중 선택해 주세요. 앞자리 0과 거리의 소수점 표시 형식은 이 설정에서 변경할 수 없습니다.",
+      "title": "Estimated arrival time format",
+      "description": "Choose 12-hour, 24-hour or vehicle time settings. Leading zeros and distance decimal formatting cannot be changed here.",
       "options": [
         {
           "value": "24",
-          "title": "24시간 (23:00)"
+          "title": "24-hour (23:00)"
         },
         {
           "value": "12",
-          "title": "12시간 (11:00 PM)"
+          "title": "12-hour (11:00 PM)"
         },
         {
           "value": "system",
-          "title": "차량 시간 설정에 맞춤"
+          "title": "Match vehicle time settings"
         }
       ]
     }
