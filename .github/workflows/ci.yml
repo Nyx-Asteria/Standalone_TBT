@@ -20,9 +20,10 @@ jobs:
       - name: CarPlay lifecycle and subscription policy
         run: |
           mkdir -p out/policy
-          javac --release 8 -d out/policy src/CpSessionLifecycle.java src/CpSubscriptionRecovery.java tests/CpSessionLifecycleTest.java tests/CpSubscriptionRecoveryTest.java
+          javac --release 8 -d out/policy src/CpSessionLifecycle.java src/CpSubscriptionRecovery.java tests/CpSessionLifecycleTest.java tests/CpSubscriptionRecoveryTest.java src/CpWazeRecovery.java tests/CpWazeRecoveryTest.java
           java -cp out/policy hmgapi.mods.projection.carplay.CpSessionLifecycleTest
           java -cp out/policy hmgapi.mods.projection.carplay.CpSubscriptionRecoveryTest
+          java -cp out/policy hmgapi.mods.projection.carplay.CpWazeRecoveryTest
       - name: Validate package identity
         run: |
           python3 - <<'PY'
