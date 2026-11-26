@@ -114,10 +114,11 @@ public final class Dipo {
             @Override
             public void onServiceDisconnected(ComponentName name) {
                 iap2 = null;
+                final int generation = session.generation();
                 post(new Runnable() {
                     @Override
                     public void run() {
-                        turns.disconnected();
+                        if (session.generation() == generation && iap2 == null) turns.disconnected();
                     }
                 });
                 log("DiPO: iAP2 server gone");
@@ -244,11 +245,13 @@ public final class Dipo {
     /** after a source change: Stop, then Start, so the phone sends its whole current state (the build's HmgApiRgRestart) */
     static void restartRouteGuidance() {
         IIap2Service s = iap2;
-        if (s == null) return;
+        if (s == null || !mod.enabled()) return;
+        final int generation = session.generation();
         OWN.set(Boolean.TRUE);
         try {
             s.Iap2SvcStopRouteGuidanceUpdate(RG_COMPONENTS);
             Thread.sleep(200);
+            if (session.generation() != generation || iap2 != s || !mod.enabled()) return;
             s.Iap2SvcStartRouteGuidanceUpdate(RG_COMPONENTS, true, true);
         } catch (Throwable t) {
             // the session went away meanwhile
@@ -260,7 +263,6 @@ public final class Dipo {
     /** HMG-API's iAP2 listener for route guidance: everything goes to CpTurns on its thread */
     static final class RgListener extends IIap2Listener.Stub {
         private int seenTypes;
-        private String lastRouteFields;
         private final String[] lastFields = new String[3];
         private final long[] lastTraceAt = new long[3];
         private int traceGeneration = -1;
@@ -274,10 +276,11 @@ public final class Dipo {
             // as DiPO's listener: component 2 isn't a session, and the bridge's own sessions end while wireless CarPlay runs
             log("CarPlay: iAP2 listener disconnected component=" + component + " preserved=" + session.ignoreDisconnect(component));
             if (session.ignoreDisconnect(component)) return;
+            final int generation = session.generation();
             post(new Runnable() {
                 @Override
                 public void run() {
-                    if (!session.ignoreDisconnect(component)) turns.disconnected();
+                    if (session.generation() == generation && !session.ignoreDisconnect(component)) turns.disconnected();
                 }
             });
         }
@@ -285,9 +288,11 @@ public final class Dipo {
         @Override
         public void notify(final int what, int a1, int a2, final Iap2NotiMsg msg) {
             if ((what != RG_UPDATE && what != RG_MANEUVER && what != RG_LANES) || msg == null) return;
+            final int receivedGeneration = session.generation();
             post(new Runnable() {
                 @Override
                 public void run() {
+                    if (session.generation() != receivedGeneration || !mod.enabled()) return;
                     int typeBit = 1 << (what - RG_UPDATE);
                     if ((seenTypes & typeBit) == 0) {
                         seenTypes |= typeBit;
