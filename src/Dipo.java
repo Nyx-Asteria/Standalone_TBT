@@ -126,6 +126,29 @@ public final class Dipo {
         log("DiPO: iAP2 server " + (bound ? "binding" : "can't be bound"));
     }
 
+    // Verified against the US DL322 com.tcc.iap2.odex Binder signatures.
+    // Reflection keeps older compile-time stubs and firmware variants compatible.
+    private static void traceComponents(IIap2Service service, String reason) {
+        try {
+            Class<?> api = IIap2Service.class;
+            int count = ((Number)api.getMethod("Iap2SvcGetRouteGuidanceRegisteredComponentCount").invoke(service)).intValue();
+            int selected = ((Number)api.getMethod("Iap2SvcGetRouteGuidanceComponentIdByName", String.class)
+                    .invoke(service, RG_COMPONENTS[0])).intValue();
+            log("CarPlay registered guidance components reason=" + reason + " count=" + count
+                    + " requestedName=" + RG_COMPONENTS[0] + " resolvedId=" + selected);
+            if (count <= 0 || count > 32) return;
+            int[] ids = new int[count];
+            java.util.Arrays.fill(ids, -1);
+            String[] names = new String[count];
+            Object result = api.getMethod("Iap2SvcGetRouteGuidanceComponentNameIdList", int[].class, String[].class)
+                    .invoke(service, ids, names);
+            log("CarPlay guidance component list result=" + result + " ids="
+                    + java.util.Arrays.toString(ids) + " names=" + java.util.Arrays.toString(names));
+        } catch (Exception e) {
+            log("CarPlay guidance component enumeration unavailable: " + e);
+        }
+    }
+
     // Serialized on the guidance worker; never perform a Binder request in a stock callback.
     private static void requestSubscription(final String reason, long delay) {
         final int generation = session.generation();
@@ -138,6 +161,8 @@ public final class Dipo {
                 if (lastSubscriptionGeneration == generation && now - lastSubscriptionAt < 750) return;
                 lastSubscriptionGeneration = generation;
                 lastSubscriptionAt = now;
+                traceComponents(service, reason);
+                if (!session.current(generation) || iap2 != service) return;
                 try {
                     log("CarPlay: " + reason + " route update request=" +
                             service.Iap2SvcStartRouteGuidanceUpdate(RG_COMPONENTS, true, true));
