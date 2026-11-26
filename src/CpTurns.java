@@ -489,6 +489,9 @@ final class CpTurns {
     void stop(String reason) {
         Dipo.log("CarPlay: route stop reason="+reason);
         cancelSubscriptionRecovery();
+        lastPhoneTurnAt = 0;
+        lastJunctionTrial = null;
+        Dipo.experimentalIncompleteWaze(source, false, false);
         tollDisplay.clear();facilityContext.clear();junctionTarget.clear();mapDisplay.clear();
         requestMap(false);
         Dipo.turnsHandler.removeCallbacks(refreshMap);mapTickQueued=false;
