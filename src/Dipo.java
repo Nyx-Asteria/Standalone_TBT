@@ -31,6 +31,7 @@ public final class Dipo {
     static final int RG_UPDATE = 120, RG_MANEUVER = 121, RG_LANES = 122;
     static final String[] RG_COMPONENTS = { "RouteGuidanceComponent0" };
 
+    private static SessionJournal journal;
     static ModContext mod;
     static LoadedApp app;
     static volatile IIap2Service iap2;
@@ -49,11 +50,13 @@ public final class Dipo {
 
     static void log(String m) {
         mod.log(m);
+        if (journal != null) journal.record(m);
         if(app!=null)CpInputTrace.record(app.context,m);
     }
 
     static void error(String m, Throwable t) {
         mod.error(m, t);
+        if (journal != null) journal.record(m + " error=" + t.getClass().getSimpleName());
         if(app!=null)CpInputTrace.record(app.context,m+" error="+t);
     }
 
@@ -67,6 +70,7 @@ public final class Dipo {
     public static void start(ModContext m, LoadedApp a) {
         mod = m;
         app = a;
+        if (a.context != null) journal = new SessionJournal(a.context, "stbt-carplay-sessions");
         turnByTurn();
         if (!tbt) return;
         // Use lifecycle tracking only when the matching finalization hook is available.
@@ -77,6 +81,7 @@ public final class Dipo {
                 @Override protected void beforeHookedMethod(Param p) {
                     session.end();
                     log("CarPlay: session finalized generation=" + session.generation());
+                    if (journal != null) journal.end("session finalized");
                     post(new Runnable() { public void run() {
                         if (!session.active()) turns.disconnected();
                     }});
@@ -102,6 +107,7 @@ public final class Dipo {
                 post(new Runnable() { public void run() {
                     if (session.current(generation)) turns.disconnected();
                 }});
+                if (journal != null) journal.start("transport=" + (p.args.length > 0 ? p.args[0] : "unknown"));
                 log("CarPlay: session started generation=" + session.generation() + " wireless=" + session.wireless());
                 requestSubscription("session started", 1000);
             }
