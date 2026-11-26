@@ -73,6 +73,7 @@ public final class Dipo {
             mod.hook(app.classLoader, "dipo.carplay.session_finalized", new MethodHook() {
                 @Override protected void beforeHookedMethod(Param p) {
                     session.end();
+                    log("CarPlay: session finalized generation=" + session.generation());
                     post(new Runnable() { public void run() {
                         if (!session.active()) turns.disconnected();
                     }});
@@ -83,7 +84,7 @@ public final class Dipo {
                     @Override public void onReceive(Context c, Intent i) {
                         if ("com.tcc.iap2.connectedsuccess".equals(i.getAction())
                                 && i.getIntExtra("com.telechips.android.iap2.component", -1) == 5
-                                && session.wireless()) requestSubscription("component 5 authenticated", 0);
+                                && session.wireless()) requestSubscription("component 5 authenticated", 1000);
                     }
                 }, new IntentFilter("com.tcc.iap2.connectedsuccess"));
             } catch (RuntimeException e) {
@@ -92,8 +93,9 @@ public final class Dipo {
         }
         mod.hook(app.classLoader, "dipo.carplay.session_started", new MethodHook() {
             @Override protected void afterHookedMethod(Param p) {
-                if (p.hasThrowable()) return;
-                session.start(Integer.valueOf(1).equals(p.args[0]), lifecycle);
+                if (p.getThrowable() != null) return;
+                session.start(p.args.length > 0 && Integer.valueOf(1).equals(p.args[0]), lifecycle);
+                log("CarPlay: session started generation=" + session.generation() + " wireless=" + session.wireless());
                 requestSubscription("session started", 1000);
             }
         });
@@ -234,13 +236,18 @@ public final class Dipo {
     static final class RgListener extends IIap2Listener.Stub {
         private int seenTypes;
         private String lastRouteFields;
-        private int packetSamples;
+        private final String[] lastFields = new String[3];
+        private final long[] lastTraceAt = new long[3];
+        private int traceGeneration = -1;
         @Override
-        public void connected(int component, String serial) {}
+        public void connected(int component, String serial) {
+            log("CarPlay: iAP2 listener connected component=" + component);
+        }
 
         @Override
         public void disconnected(final int component) {
             // as DiPO's listener: component 2 isn't a session, and the bridge's own sessions end while wireless CarPlay runs
+            log("CarPlay: iAP2 listener disconnected component=" + component + " preserved=" + session.ignoreDisconnect(component));
             if (session.ignoreDisconnect(component)) return;
             post(new Runnable() {
                 @Override
@@ -261,50 +268,25 @@ public final class Dipo {
                         seenTypes |= typeBit;
                         log("CarPlay: first route guidance event type=" + what);
                     }
-                    if (packetSamples < 16 && (what == RG_UPDATE || what == RG_MANEUVER)) {
-                        packetSamples++;
-                        Iap2NotiMsg.Iap2ObjGroup group = msg.getItemGroup();
-                        StringBuilder fields = new StringBuilder();
-                        for (int i = 0; group != null && i < group.getItemCnt() && i < 24; i++) {
-                            Iap2NotiMsg.Iap2ObjItem item = group.getObjItem(i);
-                            if (item == null) continue;
-                            int id = item.getItemId(), type = item.getItemParamType();
-                            fields.append(' ').append(id).append('/').append(type)
-                                  .append('/').append(item.getItemObjCount());
-                            if (what == RG_UPDATE && id == 1 && type == 8) {
-                                int[] value = item.getItemIntArray();
-                                if (value != null && value.length > 0) fields.append('=').append(value[0]);
-                            }
+                    // Trace changed decoded fields, with a periodic heartbeat for unchanged packets.
+                    // The logger is independent of the decoder: diagnostics must not block navigation.
+                    try {
+                        int generation = session.generation();
+                        if (traceGeneration != generation) {
+                            java.util.Arrays.fill(lastFields, null);
+                            java.util.Arrays.fill(lastTraceAt, 0L);
+                            traceGeneration = generation;
                         }
-                        log("CarPlay: packet " + what + " fields id/type/count:" + fields);
-                    }
-                    if (what == RG_MANEUVER) {
-                        log("CarPlay: maneuver input " + CpTurns.inputFields(msg.getItemGroup()));
-                    }
-                    if (what == RG_UPDATE || what == RG_MANEUVER) {
-                        Iap2NotiMsg.Iap2ObjGroup group = msg.getItemGroup();
-                        StringBuilder raw = new StringBuilder();
-                        for (int k = 0; group != null && k < group.getItemCnt(); k++) {
-                            Iap2NotiMsg.Iap2ObjItem item = group.getObjItem(k);
-                            if (item == null) continue;
-                            int id = item.getItemId();
-                            boolean selected = what == RG_MANEUVER
-                                    ? (id == 0 || id == 1 || id == 3 || id == 8 || id == 9 || id == 11 || id == 12)
-                                    : (id == 0 || id == 1 || id == 13 || id == 14 || id == 16 || id == 17 || id == 18);
-                            if (!selected) continue;
-                            int type = item.getItemParamType();
-                            if (type != 1 && type != 5 && type != 8 && type != 9) continue;
-                            int[] values = item.getItemIntArray();
-                            raw.append(" id=").append(id).append("/type=").append(type)
-                                    .append("/values=").append(java.util.Arrays.toString(values));
+                        int slot = what - RG_UPDATE;
+                        String fields = CpTurns.inputFields(msg.getItemGroup());
+                        long now = android.os.SystemClock.elapsedRealtime();
+                        if (!fields.equals(lastFields[slot]) || now - lastTraceAt[slot] >= 10000) {
+                            log("CarPlay decoded packet=" + what + " generation=" + generation + fields);
+                            lastFields[slot] = fields;
+                            lastTraceAt[slot] = now;
                         }
-                        String record = raw.toString();
-                        if (what == RG_MANEUVER) {
-                            log("TBT 1.0.0-rc.1 received maneuver" + record);
-                        } else if (!record.equals(lastRouteFields)) {
-                            log("TBT 1.0.0-rc.1 received route" + record);
-                            lastRouteFields = record;
-                        }
+                    } catch (Throwable diagnosticError) {
+                        error("CarPlay packet trace", diagnosticError);
                     }
                     if (what == RG_UPDATE) turns.routeGuidance(msg);
                     else if (what == RG_MANEUVER) turns.maneuver(msg);
