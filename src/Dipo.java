@@ -41,6 +41,13 @@ public final class Dipo {
     private static final CpSessionLifecycle session = new CpSessionLifecycle();
     private static long lastSubscriptionAt = -10000;
     private static int lastSubscriptionGeneration = -1;
+    private static int experimentalStartupGeneration = -1;
+    private static int receivedPacketGeneration = -1;
+    private static int experimentalWazeGeneration = -1;
+    private static String experimentalSource;
+    private static boolean experimentalWazePending;
+    private static int experimentalWazeAttempts;
+    private static int experimentalSourceEpoch;
     /** set while HMG-API itself calls the iAP2 server (its own route guidance restart) */
     static final ThreadLocal<Boolean> OWN = new ThreadLocal<Boolean>();
 
@@ -166,6 +173,7 @@ public final class Dipo {
                 if (lastSubscriptionGeneration == generation && now - lastSubscriptionAt < 750) return;
                 lastSubscriptionGeneration = generation;
                 lastSubscriptionAt = now;
+                experimentalStartup(generation);
                 traceComponents(service, reason);
                 if (!session.current(generation) || iap2 != service) return;
                 try {
@@ -174,6 +182,54 @@ public final class Dipo {
                 } catch (Throwable e) { error("CarPlay: " + reason + " route update request", e); }
             }
         }, delay);
+    }
+
+    // Opt-in only. A silent session gets one Start-only refresh; an identified Waze
+    // source with incomplete guidance gets at most two refreshes per source activation.
+    // Never invent a maneuver or override an explicit unsupported-source flag.
+    private static boolean experimentalEnabled() {
+        return mod.enabled() && mod.settingBoolean("experimental_waze_recovery", false);
+    }
+
+    private static void experimentalStartup(final int generation) {
+        if (!experimentalEnabled() || experimentalStartupGeneration == generation) return;
+        experimentalStartupGeneration = generation;
+        turnsHandler.postDelayed(new Runnable() { public void run() {
+            if (!experimentalEnabled() || !session.current(generation)
+                    || receivedPacketGeneration == generation) return;
+            requestSubscription("experimental silent-session refresh", 0);
+        }}, 5000);
+    }
+
+    static void experimentalSourceChanged(String source) {
+        experimentalSource = source;
+        experimentalSourceEpoch++;
+        experimentalWazePending = false;
+        experimentalWazeAttempts = 0;
+        experimentalWazeGeneration = session.generation();
+    }
+
+    static void experimentalIncompleteWaze(String source, boolean missing, boolean explicitlyUnsupported) {
+        if (!experimentalEnabled()) return;
+        int generation = session.generation();
+        if (experimentalWazeGeneration != generation
+                || !(source == null ? experimentalSource == null : source.equals(experimentalSource))) experimentalSourceChanged(source);
+        if (source == null || !source.toLowerCase(java.util.Locale.ROOT).contains("waze")
+                || !missing || explicitlyUnsupported) {
+            if (experimentalWazePending) experimentalSourceEpoch++;
+            experimentalWazePending = false;
+            return;
+        }
+        if (!session.current(generation) || experimentalWazePending || experimentalWazeAttempts >= 2) return;
+        experimentalWazePending = true;
+        final int token = generation, epoch = experimentalSourceEpoch;
+        turnsHandler.postDelayed(new Runnable() { public void run() {
+            if (experimentalSourceEpoch != epoch || !session.current(token)) return;
+            experimentalWazePending = false;
+            if (!experimentalEnabled()) return;
+            experimentalWazeAttempts++;
+            requestSubscription("experimental Waze incomplete guidance attempt=" + experimentalWazeAttempts, 0);
+        }}, 3000);
     }
 
     private static void turnByTurn() {
@@ -298,6 +354,7 @@ public final class Dipo {
                 public void run() {
                     if (session.generation() != receivedGeneration || !mod.enabled()) return;
                     if (receivedGeneration != 0 && !session.active()) return;
+                    receivedPacketGeneration = receivedGeneration;
                     int typeBit = 1 << (what - RG_UPDATE);
                     if ((seenTypes & typeBit) == 0) {
                         seenTypes |= typeBit;
