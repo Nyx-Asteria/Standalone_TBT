@@ -347,6 +347,7 @@ public final class Dipo {
                     // Trace changed decoded fields, with a periodic heartbeat for unchanged packets.
                     // The logger is independent of the decoder: diagnostics must not block navigation.
                     try {
+                        if (mod.settingBoolean("verbose_diagnostics", false)) {
                         int generation = session.generation();
                         if (traceGeneration != generation) {
                             java.util.Arrays.fill(lastFields, null);
@@ -356,10 +357,11 @@ public final class Dipo {
                         int slot = what - RG_UPDATE;
                         String fields = CpTurns.inputFields(msg.getItemGroup());
                         long now = android.os.SystemClock.elapsedRealtime();
-                        if (!fields.equals(lastFields[slot]) || now - lastTraceAt[slot] >= 10000) {
+                        if (!fields.equals(lastFields[slot])) {
                             log("CarPlay decoded packet=" + what + " generation=" + generation + fields);
                             lastFields[slot] = fields;
                             lastTraceAt[slot] = now;
+                        }
                         }
                     } catch (Throwable diagnosticError) {
                         error("CarPlay packet trace", diagnosticError);
