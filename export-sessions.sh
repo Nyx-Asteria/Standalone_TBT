@@ -25,8 +25,8 @@ while true; do
             [ -f "$src" ] && [ ! -L "$src" ] || continue
             name=${src##*/}
             [ ! -L "$dest/$name" ] && [ ! -L "$dest/$name.part" ] || continue
-            [ -f "$dest/$name" ] && cmp -s "$src" "$dest/$name" && continue
-            if cat "$src" > "$dest/$name.part" && cmp -s "$src" "$dest/$name.part"; then
+            [ -f "$dest/$name" ] && cmp "$src" "$dest/$name" >/dev/null 2>&1 && continue
+            if cat "$src" > "$dest/$name.part" && cmp "$src" "$dest/$name.part" >/dev/null 2>&1; then
                 mv "$dest/$name.part" "$dest/$name" || rm -f "$dest/$name.part"
             else
                 rm -f "$dest/$name.part"
