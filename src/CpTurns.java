@@ -387,6 +387,17 @@ final class CpTurns {
         return null;
     }
 
+    static String packetCapability(Iap2NotiMsg.Iap2ObjGroup group) {
+        for (int k = 0; group != null && k < group.getItemCnt(); k++) {
+            Iap2NotiMsg.Iap2ObjItem item = group.getObjItem(k);
+            if (item == null || item.getItemId() != 20 || item.getItemParamType() != 9
+                    || item.getItemObjCount() <= 0) continue;
+            int[] v = item.getItemIntArray();
+            if (v != null && v.length > 0) return v[0] == 0 ? "unsupported" : "supported";
+        }
+        return "absent";
+    }
+
     static String focusedFields(Iap2NotiMsg.Iap2ObjGroup group) {
         return inputFields(group, false);
     }
