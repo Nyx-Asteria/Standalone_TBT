@@ -4,7 +4,7 @@ Standalone TBT has no installer model or region restriction. It requires Hyundai
 
 ## Fork validation
 
-The maintainer reports that the original standalone TBT works alongside WCP with WCP TBT disabled on the US K5. This establishes coexistence in that configuration, not full validation of the renamed fork or every display mode. US K5 engine hash/ABI verification, fork build validation and detailed Apple Maps/Google Maps testing remain pending.
+2026-11-25: The maintainer confirms actual use of the original standalone TBT in the United States on a 2022 Kia K5 EX (DL322, USA 260507), alongside WCP with WCP TBT disabled. No compatibility restriction is needed for this configuration. This establishes coexistence in that configuration, not full validation of the renamed fork or every display mode. US K5 engine hash/ABI verification, fork build validation and detailed Apple Maps/Google Maps testing remain pending.
 
 ## Upstream vehicle reports
 
