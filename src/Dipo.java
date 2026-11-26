@@ -229,7 +229,9 @@ public final class Dipo {
             if (!experimentalEnabled()) return;
             experimentalWazeAttempts++;
             requestSubscription("experimental Waze incomplete guidance attempt=" + experimentalWazeAttempts, 0);
-        }}, 3000);
+            // A missing reply must not prevent the second bounded attempt.
+            experimentalIncompleteWaze(experimentalSource, true, false);
+        }}, experimentalWazeAttempts == 0 ? 3000 : 7000);
     }
 
     private static void turnByTurn() {
