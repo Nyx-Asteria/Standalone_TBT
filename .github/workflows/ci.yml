@@ -39,3 +39,6 @@ jobs:
           PY
       - name: USB logging regression
         run: python3 tests/export_refresh_test.py
+
+      - name: Completed session export regression
+        run: python3 tests/session_export_test.py
