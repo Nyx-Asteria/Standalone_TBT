@@ -336,6 +336,7 @@ public final class Dipo {
         private int traceGeneration = -1;
         private int focusedGeneration = -1;
         private String focusedSource;
+        private final java.util.Map<Integer,String> focusedComponents = new java.util.HashMap<Integer,String>();
         private final String[] focusedLast = new String[3];
 
         private void focusedTrace(int generation, int what, Iap2NotiMsg msg) {
@@ -345,9 +346,14 @@ public final class Dipo {
                 j.end("generation changed");
                 focusedGeneration = generation;
                 focusedSource = null;
+                focusedComponents.clear();
                 java.util.Arrays.fill(focusedLast, null);
             }
             String source = what == RG_UPDATE ? CpTurns.packetSource(msg.getItemGroup()) : null;
+            int[] ids = CpTurns.componentIds(msg);
+            if (source != null && ids != null) {
+                for (int id : ids) if (id >= 0) focusedComponents.put(id, source);
+            }
             if (source != null && !source.equals(focusedSource)) {
                 j.end("source changed");
                 focusedSource = source;
@@ -356,9 +362,12 @@ public final class Dipo {
             }
             if (!ThirdPartyTrace.isThirdParty(focusedSource)) return;
             int slot = what - RG_UPDATE;
-            String fields = CpTurns.focusedFields(msg.getItemGroup());
+            String attribution = ThirdPartyTrace.attribution(focusedComponents, ids, focusedSource, source);
+            String capability = what == RG_UPDATE ? CpTurns.packetCapability(msg.getItemGroup()) : "not-applicable";
+            String fields = " attribution=" + attribution + " capability=" + capability + CpTurns.focusedFields(msg.getItemGroup());
+            if ("different-source".equals(attribution)) return;
             if (!fields.equals(focusedLast[slot])) {
-                j.record("type=" + what + " source=" + focusedSource + fields);
+                j.record("type=" + what + " source=" + ("unattributed".equals(attribution) ? "unknown" : focusedSource) + fields);
                 focusedLast[slot] = fields;
             }
         }
