@@ -65,7 +65,10 @@ jobs:
           java-version: '17'
       - name: Android build tools
         run: |
-          sdkmanager "platforms;android-19" "build-tools;35.0.0"
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          test -x "$SDK/cmdline-tools/latest/bin/sdkmanager"
+          "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" "platforms;android-19" "build-tools;35.0.0"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
       - name: Compile and sign with disposable CI key
         run: |
           export HMG_API="$PWD/.hmgapi-src"
