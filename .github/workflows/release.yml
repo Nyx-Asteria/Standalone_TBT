@@ -1,0 +1,114 @@
+name: Release
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  policy:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'Release standalone ')
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: CarPlay lifecycle and subscription policy
+        run: |
+          mkdir -p out/policy
+          javac --release 8 -d out/policy src/CpSessionLifecycle.java src/CpSubscriptionRecovery.java tests/CpSessionLifecycleTest.java tests/CpSubscriptionRecoveryTest.java src/CpWazeRecovery.java tests/CpWazeRecoveryTest.java src/CpDistancePolicy.java tests/CpDistancePolicyTest.java src/ThirdPartyTrace.java tests/ThirdPartyTraceTest.java
+          java -cp out/policy hmgapi.mods.projection.carplay.CpSessionLifecycleTest
+          java -cp out/policy hmgapi.mods.projection.carplay.CpSubscriptionRecoveryTest
+          java -cp out/policy hmgapi.mods.projection.carplay.CpWazeRecoveryTest
+          java -cp out/policy hmgapi.mods.projection.carplay.CpDistancePolicyTest
+          java -cp out/policy hmgapi.mods.projection.carplay.ThirdPartyTraceTest
+      - name: Validate package identity
+        run: |
+          python3 - <<'PY'
+          import json, configparser, pathlib
+          m=json.load(open('mod.json'))
+          c=configparser.ConfigParser(interpolation=None); c.read('installer/NEMESIS.data')
+          assert m['id']=='standalone-tbt'
+          assert c['nemesis']['id']=='hmgapi.'+m['id']
+          assert c['nemesis']['package-version']==m['version']
+          assert pathlib.Path('installer/mod/id').read_text().strip()==m['id']
+          assert all(pathlib.Path(p).is_file() for rs in m['hooks']['native'].values() for p in rs)
+          PY
+      - name: USB logging regression
+        run: python3 tests/export_refresh_test.py
+
+      - name: Completed session export regression
+        run: python3 tests/session_export_test.py
+
+      - name: Session journal regression
+        run: python3 tests/session_journal_test.py
+
+  release:
+    needs: policy
+    environment: release
+    permissions:
+      contents: write
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: Open-HMG/HMG-API
+          ref: a1830a83a8ad4bf3377be32e9064c5018947a2f6
+          path: .hmgapi-src
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Android build tools
+        run: |
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          test -x "$SDK/cmdline-tools/latest/bin/sdkmanager"
+          "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" "platforms;android-19" "build-tools;35.0.0"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+      - name: Compile and sign with configured author key
+        env:
+          MOD_KEY: ${{ secrets.MOD_KEY }}
+          MOD_KEY_PUB: ${{ secrets.MOD_KEY_PUB }}
+        run: |
+          export HMG_API="$PWD/.hmgapi-src"
+          export ANDROID_JAR="$ANDROID_HOME/platforms/android-19/android.jar"
+          export D8="$ANDROID_HOME/build-tools/35.0.0/d8"
+          export SIGNING_KEY="$RUNNER_TEMP/stbt-ci.key"
+          mkdir -p "$RUNNER_TEMP/runtime-stubs" "$RUNNER_TEMP/runtime"
+          find "$HMG_API/core/runtime/stubs" -name '*.java' > "$RUNNER_TEMP/stubs.args"
+          find "$HMG_API/core/runtime/java" -name '*.java' > "$RUNNER_TEMP/runtime.args"
+          javac --release 8 -cp "$ANDROID_JAR" -d "$RUNNER_TEMP/runtime-stubs" @"$RUNNER_TEMP/stubs.args"
+          javac --release 8 -cp "$ANDROID_JAR:$RUNNER_TEMP/runtime-stubs" -d "$RUNNER_TEMP/runtime" @"$RUNNER_TEMP/runtime.args"
+          umask 077
+          test -n "$MOD_KEY" && test -n "$MOD_KEY_PUB"
+          printf '%s' "$MOD_KEY" | base64 -d > "$SIGNING_KEY"
+          printf '%s' "$MOD_KEY_PUB" | base64 -d > "$SIGNING_KEY.pub"
+          test -s "$SIGNING_KEY" && test -s "$SIGNING_KEY.pub"
+          sh build.sh
+      - name: Remove signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/stbt-ci.key" "$RUNNER_TEMP/stbt-ci.key.pub"
+      - name: Validate signed package and installer wrapper
+        run: |
+          version=$(python3 -c 'import json;print(json.load(open("mod.json"))["version"])')
+          archive="dist/standalone-tbt-$version.zip"
+          unzip -t "$archive"
+          python3 tools/build_application_package.py "$archive" "dist/standalone-tbt-$version-nemesis-package.zip"
+          unzip -t "dist/standalone-tbt-$version-nemesis-package.zip"
+      - name: Publish verified release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(python3 -c 'import json;print(json.load(open("mod.json"))["version"])')
+          notes="RELEASE-v$version.md"
+          test -s "$notes"
+          (cd dist && sha256sum *.zip > SHA256SUMS)
+          gh release create "v$version" --target "$GITHUB_SHA" --draft=false --prerelease=false --latest=true --title "Standalone TBT $version" --notes-file "$notes" dist/*.zip dist/SHA256SUMS
