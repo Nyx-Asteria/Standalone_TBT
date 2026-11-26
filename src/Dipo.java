@@ -142,7 +142,7 @@ public final class Dipo {
 
     // Verified against the US DL322 com.tcc.iap2.odex Binder signatures.
     // Reflection keeps older compile-time stubs and firmware variants compatible.
-    private static void traceComponents(IIap2Service service, String reason) {
+    private static int traceComponents(IIap2Service service, String reason) {
         try {
             Class<?> api = IIap2Service.class;
             int count = ((Number)api.getMethod("Iap2SvcGetRouteGuidanceRegisteredComponentCount").invoke(service)).intValue();
@@ -150,7 +150,7 @@ public final class Dipo {
                     .invoke(service, RG_COMPONENTS[0])).intValue();
             log("CarPlay registered guidance components reason=" + reason + " count=" + count
                     + " requestedName=" + RG_COMPONENTS[0] + " resolvedId=" + selected);
-            if (count <= 0 || count > 32) return;
+            if (count <= 0 || count > 32) return count;
             int[] ids = new int[count];
             java.util.Arrays.fill(ids, -1);
             String[] names = new String[count];
@@ -158,8 +158,10 @@ public final class Dipo {
                     .invoke(service, ids, names);
             log("CarPlay guidance component list result=" + result + " ids="
                     + java.util.Arrays.toString(ids) + " names=" + java.util.Arrays.toString(names));
+            return count;
         } catch (Exception e) {
             log("CarPlay guidance component enumeration unavailable: " + e);
+            return -1;
         }
     }
 
@@ -175,12 +177,16 @@ public final class Dipo {
                 if (lastSubscriptionGeneration == generation && now - lastSubscriptionAt < 750) return;
                 lastSubscriptionGeneration = generation;
                 lastSubscriptionAt = now;
-                experimentalStartup(generation);
-                traceComponents(service, reason);
+                int count = traceComponents(service, reason);
+                if (count == 0 && reason.startsWith("experimental")) {
+                    log("CarPlay: experimental refresh skipped; no registered guidance components");
+                    return;
+                }
                 if (!session.current(generation) || iap2 != service) return;
                 try {
                     log("CarPlay: " + reason + " route update request=" +
                             service.Iap2SvcStartRouteGuidanceUpdate(RG_COMPONENTS, true, true));
+                    if (count != 0) experimentalStartup(generation);
                 } catch (Throwable e) { error("CarPlay: " + reason + " route update request", e); }
             }
         }, delay);
