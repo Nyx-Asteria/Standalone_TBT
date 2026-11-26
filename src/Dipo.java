@@ -95,6 +95,10 @@ public final class Dipo {
             @Override protected void afterHookedMethod(Param p) {
                 if (p.getThrowable() != null) return;
                 session.start(p.args.length > 0 && Integer.valueOf(1).equals(p.args[0]), lifecycle);
+                final int generation = session.generation();
+                post(new Runnable() { public void run() {
+                    if (session.current(generation)) turns.disconnected();
+                }});
                 log("CarPlay: session started generation=" + session.generation() + " wireless=" + session.wireless());
                 requestSubscription("session started", 1000);
             }
@@ -293,6 +297,7 @@ public final class Dipo {
                 @Override
                 public void run() {
                     if (session.generation() != receivedGeneration || !mod.enabled()) return;
+                    if (receivedGeneration != 0 && !session.active()) return;
                     int typeBit = 1 << (what - RG_UPDATE);
                     if ((seenTypes & typeBit) == 0) {
                         seenTypes |= typeBit;
