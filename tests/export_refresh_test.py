@@ -1,15 +1,15 @@
 """Current capture wins over old history; daemon IPC is forbidden; connected refresh completes."""
 import os,pathlib,subprocess,tempfile
-source=pathlib.Path(__file__).resolve().parents[1]/'mod/export-logs.sh'
+source=pathlib.Path(__file__).resolve().parents[1]/'export-logs.sh'
 with tempfile.TemporaryDirectory(prefix='tbt-export-') as tmp:
  p=pathlib.Path(tmp);usb=p/'storage/usb0/TBT-LOGS';usb.mkdir(parents=True)
- data=p/'data';mod=data/'hmgapi/mods/wired-carplay-tbt-lx2pe';mod.mkdir(parents=True)
+ data=p/'data';mod=data/'hmgapi/mods/standalone-tbt';mod.mkdir(parents=True)
  (mod/'mod.json').write_text('{"version":"1.0.5"}')
  history=data/'hmgapi/logs/hmgapi';history.mkdir(parents=True)
- (history/'log.log.1').write_text('[wired-carplay-tbt-lx2pe] OLD_058\n'*30000)
- (history/'log.log').write_text('[wired-carplay-tbt-lx2pe] SAVED_RECENT\n')
+ (history/'log.log.1').write_text('[standalone-tbt] OLD_058\n'*30000)
+ (history/'log.log').write_text('[standalone-tbt] SAVED_RECENT\n')
  capture=data/'hmgapi/logs/phone-projection-tbt-capture';capture.mkdir()
- (capture/'capture.log').write_text('[wired-carplay-tbt-lx2pe] Android Auto TBT CURRENT_085\n[ wired marker ]\n')
+ (capture/'capture.log').write_text('[standalone-tbt] Android Auto TBT CURRENT_085\n[ wired marker ]\n')
  (p/'uptime').write_text('1500 0\n');(p/'boot').write_text('current-boot\n')
  bindir=p/'bin';bindir.mkdir()
  commands={
@@ -18,8 +18,8 @@ with tempfile.TemporaryDirectory(prefix='tbt-export-') as tmp:
  'hmgapid':f'echo BAD > "{p}/daemon_called"; exit 99',
  'logcat':f'''case " $* " in *" -d "*)
 echo snapshot >> "{p}/snapshots"
-echo '[wired-carplay-tbt-lx2pe] Android Auto TBT CURRENT_083'
-echo '[wired-carplay-tbt-lx2pe] TBT transport app=com.google.android.projection.sink args=[112]'
+echo '[standalone-tbt] Android Auto TBT CURRENT_083'
+echo '[standalone-tbt] TBT transport app=com.google.android.projection.sink args=[112]'
 ;; esac''',
  'sleep':f'''[ "$1" = 2 ] || {{ /bin/sleep 1; exit 0; }}
 n=$(cat "{p}/ticks" 2>/dev/null || echo 0)
