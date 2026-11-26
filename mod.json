@@ -52,6 +52,13 @@
       "user": "root",
       "start": "android",
       "restart": true
+    },
+    {
+      "name": "carplay-session-export",
+      "script": "export-sessions.sh",
+      "user": "root",
+      "start": "android",
+      "restart": true
     }
   ],
   "conflicts": [
