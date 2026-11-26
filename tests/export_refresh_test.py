@@ -4,7 +4,7 @@ source=pathlib.Path(__file__).resolve().parents[1]/'export-logs.sh'
 with tempfile.TemporaryDirectory(prefix='tbt-export-') as tmp:
  p=pathlib.Path(tmp);usb=p/'storage/usb0/TBT-LOGS';usb.mkdir(parents=True)
  data=p/'data';mod=data/'hmgapi/mods/standalone-tbt';mod.mkdir(parents=True)
- (mod/'mod.json').write_text('{"version":"1.0.5"}')
+ (mod/'mod.json').write_text('{"version":"1.0.0-rc.1"}')
  history=data/'hmgapi/logs/hmgapi';history.mkdir(parents=True)
  (history/'log.log.1').write_text('[standalone-tbt] OLD_058\n'*30000)
  (history/'log.log').write_text('[standalone-tbt] SAVED_RECENT\n')
@@ -37,7 +37,7 @@ exit 0''',
  assert not (p/'settings_called').exists()
  assert result.stdout.count('Exported current TBT logs to')==2
  log=(usb/'phone-projection-tbt.log').read_text()
- assert all(x in log for x in ['collector_runtime=1.0.5','CURRENT_085','current-boot','"version":"1.0.5"'])
+ assert all(x in log for x in ['collector_runtime=1.0.0-rc.1','CURRENT_085','current-boot','"version":"1.0.0-rc.1"'])
  assert 'OLD_058' not in log and log.endswith('finished=1\n')
  assert 'CURRENT_085' in (usb/'android-auto.log').read_text()
  assert (usb/'export-status.txt').read_text().endswith('phase=complete\nfinished=1\n')
