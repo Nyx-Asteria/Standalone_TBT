@@ -1,43 +1,40 @@
-# 호환성 — Phone Projection TBT 1.0.5
+# Compatibility
 
-설치 파일에는 차종·국가 제한이 없습니다. 실제 동작에는 Gen5W, HMG-API 1.0.2 이상, 차량에 맞는 맵과 `Hooks on (map checked)`가 필요합니다. 기본 TBT와 순정 지도 엔진을 조회하는 확대 안내의 호환성은 별개입니다.
+Standalone TBT has no installer model or region restriction. It requires Hyundai/Kia Gen5W, HMG-API >=1.0.2 and a checked vehicle hook map. Basic guidance and native stock-map enlargement have separate compatibility requirements.
 
-## 차량별 확인 범위
+## Fork validation
 
-목록에 있는 차량 대부분에서 기본 TBT뿐 아니라 확대 안내도 정상 작동했다는 사용자 종합 확인이 있습니다(2026-11-17). 아래 표는 개별 차량의 연결 방식·버전까지 확인된 범위를 기록하며, 개별 도형이나 특정 주행 조건의 문제는 별도로 구분합니다.
+The maintainer reports that the original standalone TBT works alongside WCP with WCP TBT disabled on the US K5. This establishes coexistence in that configuration, not full validation of the renamed fork or every display mode. US K5 engine hash/ABI verification, fork build validation and detailed Apple Maps/Google Maps testing remain pending.
 
-| 차량 | 소프트웨어 / 확인 범위 | 남은 확인 |
+## Upstream vehicle reports
+
+These reports are inherited from Phone Projection TBT, not newly verified with this fork. They span earlier versions; the upstream 1.0.5 release did not establish every feature on every vehicle.
+
+| Vehicle | Firmware and reported behavior | Remaining validation |
 | --- | --- | --- |
-| 팰리세이드 LX2 PE 2023 (개발 차량) | LX2PE.KOR.0000.V039.001.260902. CarPlay NAVER·TMAP, AA NAVER·TMAP 기본 TBT·한글·잔여 거리·종료 동작 확인. 확대 안내 정상 사용자 확인 | 최신 확대 안내 수정의 실차 재검증 |
-| 팰리세이드 2022 | 유선 CarPlay TMAP 기본 TBT 사용자 확인. 확대 안내 정상 사용자 종합 확인. 펌웨어 미확인 | HUD·개별 특수 도형·다른 앱 |
-| 스팅어 마이스터 3.3 2023 | CK_PE_22.KOR.S5W_M.V039.001.260902. CarPlay NAVER 유선·무선 계기판·HUD 사용자 확인. 확대 안내 정상 사용자 종합 확인 | AA, 개별 특수 도형·특정 주행 조건 |
-| K7 프리미어 2.5 2021 | YGPE.KOR.0000.V039.001.26.09.02 (제보 표기). 무선 CarPlay NAVER 6.12.3 계기판 기본 TBT 정상. [v1.0.0 출근 주행 정상 제보](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/issues/4#issuecomment-6935343279), 확대 안내는 추가 확인 중(2026-11-17 정정). HUD 미장착 | 확대 안내, 다른 앱·AA, 개별 특수 도형의 세부 검증 |
-| K5 DL3 1.6T 2022 | DL322.KOR.0000.V039.001.260902. AA NAVER 기본 TBT 및 확대 안내 정상 사용자 확인. 엔진 수집·정적 비교 완료 | 카메라 거리 혼입 후속 수정·개별 특수 도형 |
-| 쏘나타 DN8 HEV 2022 | DN822HEV.KOR.0000.V039.001.260902. AA NAVER 기본 TBT, 계기판·HUD 확대 안내와 거리 막대 사용자 확인 | 교차로 형상·확대 시작 시점·최신 요금소/진출로 수정 |
-| K8 GL3 HEV 2023 | GL3HEV.KOR.0000.V039.001.260902. v1.0.0 유선 AA NAVER·TMAP 작동 제보. 사진에서 계기판 교차로 확대·거리 막대, HUD 방향·거리·안내명 확인 [제보 #5](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/issues/5) | 간헐적 새로고침 제보는 로그 확인 필요. CarPlay·다른 앱·최신 수정의 개별 검증 |
+| 2023 Palisade LX2 PE (development vehicle) | LX2PE.KOR.0000.V039.001.260902; CarPlay and AA NAVER/TMAP basic guidance, Korean text, remaining distance and termination; enlargement reported working | Latest enlargement fixes |
+| 2022 Palisade | Wired CarPlay TMAP basic guidance and general enlargement report; firmware unknown | HUD, special geometry, other apps |
+| 2023 Stinger Meister 3.3 | CK_PE_22.KOR.S5W_M.V039.001.260902; wired/wireless CarPlay NAVER cluster and HUD; enlargement reported | AA and specific geometry/driving conditions |
+| 2021 K7 Premier 2.5 | YGPE.KOR.0000.V039.001.26.09.02 (reported spelling); wireless CarPlay NAVER 6.12.3 basic cluster guidance; no HUD | Enlargement pending, other apps and AA |
+| 2022 K5 DL3 1.6T | DL322.KOR.0000.V039.001.260902; AA NAVER basic guidance and enlargement; engine collected and compared | Latest camera-distance fix and special geometry |
+| 2022 Sonata DN8 HEV | DN822HEV.KOR.0000.V039.001.260902; AA NAVER cluster/HUD enlargement and distance bar | Geometry, timing, toll and ramp fixes |
+| 2023 K8 GL3 HEV | GL3HEV.KOR.0000.V039.001.260902; v1.0.0 wired AA NAVER/TMAP; photos show cluster enlargement/bar and HUD direction/distance/name | Intermittent refresh, CarPlay and latest changes |
 
-위 표는 과거 버전에서 확인한 범위를 포함합니다. 1.0.5 전체 기능이 각 차량에서 검증되었다는 뜻은 아닙니다. CarPlay 카카오내비와 AA 카카오내비, 다음 안내·추천 차선·일부 시설 심볼은 앱 및 차량별 추가 시험이 필요합니다.
+Source: [upstream compatibility report](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/blob/daeaf32a6fa3c3540c74c93611dad7dedb6d417e/COMPATIBILITY.md). See also [K7 report](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/issues/4) and [K8 report](https://github.com/ch0iiih/HMG_Phone_Projection_TBT/issues/5).
 
-## 지도 엔진 조회 허용 범위
+Kakao CarPlay/AA, upcoming turns, recommended lanes and special facility artwork require additional app-specific tests.
 
-다른 차종이라도 아래와 같은 파일 해시이면 같은 프로파일로 조회합니다. 해시 일치는 파일 비교 결과이며 차량에서의 전체 동작을 보장하지 않습니다. 미등록 엔진은 순정 지도 조회를 시작하지 않고 기본 TBT로 안내합니다.
+## Stock map engine allowlist
 
-| 프로파일 | 크기 | SHA-256 |
+The code checks SHA-256 of /data/data/com.mnsoft.navi/BIN/libExSLNavi.so before native queries. Unknown hashes retain ordinary guidance.
+
+| Profile | Bytes | SHA-256 |
 | --- | --- | --- |
-| LX2 PE 기준 | 73,071,824 bytes | `de162d7015504906105037ae306d1514655791bc04d5e8a5caed10ff476b73b3` |
-| DN8 HEV / K5 DL3 / CK PE 수집본 | 73,071,816 bytes | `9ac94499c66fb56f6acf6214c5cfb9abaf7b04396d06262376549f17506bbcd9` |
+| LX2 PE | 73,071,824 | `de162d7015504906105037ae306d1514655791bc04d5e8a5caed10ff476b73b3` |
+| DN8 HEV / K5 DL3 / CK PE | 73,071,816 | `9ac94499c66fb56f6acf6214c5cfb9abaf7b04396d06262376549f17506bbcd9` |
 
-DN8·K5·스팅어 수집본은 서로 동일합니다. LX2 PE 기준본과는 끝의 8바이트만 다릅니다. 엔진 원본과 차량별 비공개 자료는 배포하지 않습니다.
+Upstream reports that the three second-profile captures are identical and differ from the LX2 PE file only in the last eight bytes. Exact hash matching does not establish every display behavior. Do not add a US engine hash without ABI and symbol verification. Proprietary engines are not distributed.
 
-## 알려진 제한과 검증 대기
+## Known limitations
 
-- 일반 교차로 확대의 400/1050m 설정은 거리 상한입니다. 지도 형상과 현재 안내의 대응이 확보되어야 하므로 해당 거리에서 항상 시작하지 않습니다.
-- 일부 삼거리에서 진입 방향별로 가지가 다르거나 확대가 생략되는 문제가 제보되었습니다. 교통섬 존재를 원인으로 확정하지 않았습니다.
-- 회전교차로는 완전한 연결 정보가 확보된 경우에만 가지를 구성합니다. 불완전하면 방향 안내를 유지합니다.
-- 요금소명, 요금소 확대 유지, 고속도로 진출로의 파란 경로 수정은 재현 시험을 통과했으나 최신 수정 이후 실차 재검증이 필요합니다.
-- AA 좌측 갈림길은 사용자 요청대로 10시 방향 표현(71/330)으로 복원했습니다. 진출입로 분류는 별도로 유지합니다.
-- 도착 예정 시간은 12시간·24시간·차량 설정 중 선택할 수 있습니다. `H:MM/HH:MM` 앞자리 0 선택과 10~100km의 `.0` 제거는 지원하지 않습니다. 10km 이상은 정수 수치를 전달하지만 화면 자릿수는 차량 UI에 따릅니다.
-- 다음 안내까지 3km 이상일 때 HUD 직진 표시는 차량 동작에 따라 남을 수 있습니다.
-- 앱이 보내지 않은 차선·유가·요금 정보를 만들어 내지 않습니다. 복수 지명·금액 교대 안내 동기화는 실차 추가 확인이 필요합니다.
-
-최종 검토: 2026-11-18. 호환성 제보에는 차종·연식·전체 펌웨어·앱·연결 방식·TBT 버전·증상 시각을 포함해 주세요. 로그에는 도로명과 위치가 포함될 수 있으므로 공개 전에 확인해 주세요.
+See [Known Issues](wiki/Known-Issues.md). Report vehicle, year, complete firmware, app, transport, versions and symptom time. Review location data before sharing logs.
