@@ -388,6 +388,10 @@ final class CpTurns {
                 int[] values = item.getItemIntArray();
                 if (values != null) out.append("/values=").append(java.util.Arrays.toString(
                         java.util.Arrays.copyOf(values, Math.min(values.length, 16))));
+            } else if (type == 3 || type == 7) {
+                long[] values = item.getItemLongArray();
+                if (values != null) out.append("/values=").append(java.util.Arrays.toString(
+                        java.util.Arrays.copyOf(values, Math.min(values.length, 16))));
             } else if (type == 10) {
                 String[] values = item.getItemStringArray();
                 if (values != null && values.length > 0 && values[0] != null) {
@@ -470,6 +474,7 @@ final class CpTurns {
         }
         tripRefreshLogged = false;
         lastTurnTrace = null;
+        lastRouteStateTrace = null;
         Dipo.turnsHandler.removeCallbacks(refreshTrip);
         reset();
         if (!showingGuidance) return;
@@ -543,6 +548,7 @@ final class CpTurns {
     }
 
     private String lastOutputState;
+    private String lastRouteStateTrace;
     private void outputState(String state) {
         if (state.equals(lastOutputState)) return;
         lastOutputState = state;
@@ -552,9 +558,13 @@ final class CpTurns {
     /** one component's update to the cluster (DiPO e/u.a(Integer, Object), with the build's changes) */
     void turn(Integer id, Update u) {
         if (id < 0 || u == null) return;
-        Dipo.log("CarPlay route state source=" + u.sourceName + " component=" + id + " state=" + u.state
+        String routeTrace = "CarPlay route state source=" + u.sourceName + " component=" + id + " state=" + u.state
                 + " sourceSupportsGuidance=" + (u.hasSupports ? String.valueOf(u.supports) : "absent")
-                + " maneuverIndexes=" + java.util.Arrays.toString(u.list));
+                + " maneuverIndexes=" + java.util.Arrays.toString(u.list);
+        if (!routeTrace.equals(lastRouteStateTrace)) {
+            Dipo.log(routeTrace);
+            lastRouteStateTrace = routeTrace;
+        }
         if (u.state < 0) {
             outputState("waiting for route state component=" + id);
             return;
@@ -1195,8 +1205,8 @@ final class CpTurns {
                                 }
                                 break;
                             case 14: count = v != null && v.length > 0 ? v[0] : 0; break;
-                            case 16: laneIndex = v != null ? v[0] : 0; break;
-                            case 17: laneCount = v != null ? v[0] : 0; break;
+                            case 16: laneIndex = v != null && v.length > 0 ? v[0] : 0; break;
+                            case 17: laneCount = v != null && v.length > 0 ? v[0] : 0; break;
                         }
                         break;
                     }
