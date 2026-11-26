@@ -72,17 +72,17 @@ while true; do
             echo "uptime=$(cat /proc/uptime 2>/dev/null)"
             cat "$stage/capture-status" "$stage/logcat-error.txt"
             echo '### Installed mod manifest'
-            cat /data/hmgapi/mods/wired-carplay-tbt-lx2pe/mod.json 2>/dev/null || :
+            cat /data/hmgapi/mods/standalone-tbt/mod.json 2>/dev/null || :
             echo '### Stock API runtime status'
             echo 'api_status=see_api-result.txt'
             echo '### HMG-API service state'
             recent_file /data/hmgapi/state/services.txt
             echo '### Current logcat snapshot (bounded)'
-            recent_file "$stage/current.raw" | grep -e '\[wired-carplay-tbt-lx2pe\]' -e 'cluster: .*failed' -e 'cluster: no NavigationCluster' || :
+            recent_file "$stage/current.raw" | grep -e '\[standalone-tbt\]' -e 'cluster: .*failed' -e 'cluster: no NavigationCluster' || :
             echo '### Recent capture snapshot (fixed-size, current file first)'
-            recent_file "$history_dir/capture.log" | grep -F '[wired-carplay-tbt-lx2pe]' || :
+            recent_file "$history_dir/capture.log" | grep -F '[standalone-tbt]' || :
             echo '### Recent HMG-API saved snapshot (fixed-size)'
-            recent_file /data/hmgapi/logs/hmgapi/log.log | grep -F '[wired-carplay-tbt-lx2pe]' || :
+            recent_file /data/hmgapi/logs/hmgapi/log.log | grep -F '[standalone-tbt]' || :
             echo 'finished=1'
         } > "$stage/phone-projection-tbt.log"
         if ! publish "$stage/phone-projection-tbt.log" "$folder/phone-projection-tbt.log"; then
@@ -98,7 +98,7 @@ while true; do
                     "$history_dir"/capture.log.3 "$history_dir"/capture.log.4 "$history_dir"/capture.log.5 \
                     /data/hmgapi/logs/hmgapi/log.log.1; do
                 echo "source=$history"
-                recent_file "$history" | grep -F '[wired-carplay-tbt-lx2pe]' || :
+                recent_file "$history" | grep -F '[standalone-tbt]' || :
             done
             echo 'finished=1'
         } > "$stage/stock-guidance.log"
