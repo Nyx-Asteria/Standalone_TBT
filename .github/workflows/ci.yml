@@ -1,0 +1,39 @@
+name: CarPlay policy tests
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  policy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: CarPlay lifecycle and subscription policy
+        run: |
+          mkdir -p out/policy
+          javac --release 8 -d out/policy src/CpSessionLifecycle.java src/CpSubscriptionRecovery.java tests/CpSessionLifecycleTest.java tests/CpSubscriptionRecoveryTest.java
+          java -cp out/policy hmgapi.mods.projection.carplay.CpSessionLifecycleTest
+          java -cp out/policy hmgapi.mods.projection.carplay.CpSubscriptionRecoveryTest
+      - name: Validate package identity
+        run: |
+          python3 - <<'PY'
+          import json, configparser, pathlib
+          m=json.load(open('mod.json'))
+          c=configparser.ConfigParser(interpolation=None); c.read('installer/NEMESIS.data')
+          assert m['id']=='standalone-tbt'
+          assert c['nemesis']['id']=='hmgapi.'+m['id']
+          assert c['nemesis']['package-version']==m['version']
+          assert pathlib.Path('installer/mod/id').read_text().strip()==m['id']
+          assert all(pathlib.Path(p).is_file() for rs in m['hooks']['native'].values() for p in rs)
+          PY
+      - name: USB logging regression
+        run: python3 tests/export_refresh_test.py
