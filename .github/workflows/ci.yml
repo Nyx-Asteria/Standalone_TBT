@@ -42,3 +42,6 @@ jobs:
 
       - name: Completed session export regression
         run: python3 tests/session_export_test.py
+
+      - name: Session journal regression
+        run: python3 tests/session_journal_test.py
