@@ -178,7 +178,7 @@ public final class Dipo {
                 });
             }
         });
-        log("Phone Projection TBT 1.0.5: route guidance listener enabled");
+        log("Standalone TBT 1.0.0-rc.1: route guidance listener enabled");
     }
 
     static void post(Runnable r) {
@@ -300,9 +300,9 @@ public final class Dipo {
                         }
                         String record = raw.toString();
                         if (what == RG_MANEUVER) {
-                            log("TBT 1.0.5 received maneuver" + record);
+                            log("TBT 1.0.0-rc.1 received maneuver" + record);
                         } else if (!record.equals(lastRouteFields)) {
-                            log("TBT 1.0.5 received route" + record);
+                            log("TBT 1.0.0-rc.1 received route" + record);
                             lastRouteFields = record;
                         }
                     }
