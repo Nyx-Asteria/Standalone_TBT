@@ -36,7 +36,9 @@ exit 0''',
  assert result.returncode==0,result.stderr
  assert not (p/'daemon_called').exists()
  assert not (p/'settings_called').exists()
- assert result.stdout.count('Exported current TBT logs to')==2
+ assert result.stdout.count('Prepared current TBT snapshot')==2
+ assert not list(usb.iterdir()), 'collector must never write USB'
+ usb=capture/'snapshots'
  log=(usb/'phone-projection-tbt.log').read_text()
  assert all(x in log for x in ['collector_runtime=1.0.0-rc.3','CURRENT_085','current-boot','"version":"1.0.0-rc.1"'])
  assert 'OLD_058' not in log and log.endswith('finished=1\n')
