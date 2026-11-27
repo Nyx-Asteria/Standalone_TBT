@@ -35,4 +35,4 @@ AGPL-3.0; see [LICENSE](LICENSE) and [NOTICE.txt](NOTICE.txt). Original authorsh
 
 ## Candidate testing
 
-See [upgrade and vehicle-test instructions](UPDATE.md) and [previous RC2 release notes](RELEASE-v1.0.0-rc.2.md). RC3 release notes will be finalized after the full commit audit. Experimental Waze guidance recovery is disabled by default and requires restart to apply. Waze compatibility remains unverified.
+See [upgrade and vehicle-test instructions](UPDATE.md) and [previous RC2 release notes](RELEASE-v1.0.0-rc.2.md). See [RC3 candidate release notes](RELEASE-v1.0.0-rc.3.md) for changes and remaining validation. Experimental Waze guidance recovery is disabled by default and requires restart to apply. Waze compatibility remains unverified.
