@@ -72,6 +72,7 @@ public final class ProjectionTbt extends ModEntry {
                     method, parameter, new MethodHook() {
                 @Override
                 protected void afterHookedMethod(Param p) {
+                    if (p.getThrowable() == null && !mod.settingBoolean("verbose_diagnostics", false)) return;
                     mod.log("Cluster trace " + app.packageName + " " + method
                             + "=" + p.args[0] + " completed=" + (p.getThrowable() == null));
                 }
@@ -177,7 +178,14 @@ public final class ProjectionTbt extends ModEntry {
                                 && (p.args[0] instanceof Number || p.args[0] instanceof Boolean)) {
                             detail = " first=" + p.args[0];
                         }
-                        String result = detail + " completed=" + (p.getThrowable() == null);
+                        // Keep all preceding publication/suppression behavior intact.
+                        if (p.getThrowable() != null) {
+                            mod.error("Native display " + name, p.getThrowable());
+                            return;
+                        }
+                        if (!mod.settingBoolean("verbose_diagnostics", false)) return;
+                        if (name.equals("sendNaviClusterHandlerMessage")) return;
+                        String result = detail + " completed=true";
                         if (mod.settingBoolean("junction_capture", true)
                                 && (name.equals("updateTBTInfo") || name.equals("updateTPCrossroadName"))) {
                             String capture = guidanceSnapshot(p.args);
@@ -189,7 +197,7 @@ public final class ProjectionTbt extends ModEntry {
                             }
                         }
                         long now = android.os.SystemClock.elapsedRealtime();
-                        if (result.equals(previous) && now - lastLogged < (trip ? 2500 : 10000)) return;
+                        if (result.equals(previous)) return;
                         previous = result;
                         lastLogged = now;
                         mod.log("Native display " + name + result);
@@ -310,6 +318,7 @@ public final class ProjectionTbt extends ModEntry {
                     protected synchronized void beforeHookedMethod(Param p) {
                         captureLaneStructure(mod, app, name, p.args);
                         int type = (Integer) p.args[parser ? 1 : 0];
+                        if (type == 6107 || !mod.settingBoolean("verbose_diagnostics", false)) return;
                         long now = android.os.SystemClock.elapsedRealtime();
                         Long last = sampled.get(type);
                         // Keep transition detail near a junction without polling the navigation engine.
