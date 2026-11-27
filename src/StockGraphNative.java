@@ -31,7 +31,7 @@ public final class StockGraphNative {
             java.io.File temp=new java.io.File(app.context.getFilesDir(),"hmgapi-stock-road-api.txt.part");
             java.io.FileOutputStream out=new java.io.FileOutputStream(temp);
             try {
-                StringBuilder text=new StringBuilder("runtime=1.0.5\nboot=").append(bootId)
+                StringBuilder text=new StringBuilder("runtime=1.0.0-rc.1\nboot=").append(bootId)
                         .append("\npid=").append(android.os.Process.myPid()).append("\nphase=").append(phase)
                         .append("\nelapsed=").append(SystemClock.elapsedRealtime()).append('\n');
                 if(road!=null)text.append("road=").append(java.util.Arrays.toString(road)).append('\n');
@@ -49,7 +49,7 @@ public final class StockGraphNative {
         try{
             java.io.File file=new java.io.File(app.context.getFilesDir(),"hmgapi-stock-road-graph.log");
             if(file.length()>4194304){java.io.File old=new java.io.File(app.context.getFilesDir(),"hmgapi-stock-road-graph.log.1");if(old.exists()&&!old.delete())return;if(!file.renameTo(old))return;}
-            String text="runtime=1.0.5 elapsed="+at+" wall="+System.currentTimeMillis()+" request="+request+"\n"
+            String text="runtime=1.0.0-rc.1 elapsed="+at+" wall="+System.currentTimeMillis()+" request="+request+"\n"
                 +"summary="+summary+"\nroot="+java.util.Arrays.toString(root)+"\n"+queries
                 +"result="+java.util.Arrays.toString(result)+"\nend\n";
             java.io.FileOutputStream out=new java.io.FileOutputStream(file,true);

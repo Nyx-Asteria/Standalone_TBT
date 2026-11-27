@@ -401,7 +401,7 @@ public final class ProjectionTbt extends ModEntry {
             observeStatus(mod, app, "responseNaviAliveStatus", boolean.class);
         }
         if ("com.mnsoft.navi".equals(app.packageName)) {
-            mod.log("Phone Projection TBT runtime=1.0.5 stock-process entry");
+            mod.log("Standalone TBT runtime=1.0.0-rc.1 stock-process entry");
             trapGauge=ProjectionTrapBar.install(mod,app);
             StockNavigationApi.install(mod, app);
             observeNativeDisplay(mod, app);

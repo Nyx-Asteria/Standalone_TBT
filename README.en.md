@@ -1,4 +1,4 @@
-# Standalone TBT
+# Standalone TBT — 1.0.0-rc.1
 
 Phone navigation on Hyundai/Kia Gen5W instrument clusters and HUDs, independent of the wireless connection mod. Based on [ch0iiih's Phone Projection TBT 1.0.5](https://github.com/ch0iiih/HMG_Phone_Projection_TBT), with English settings and a separate package identity.
 

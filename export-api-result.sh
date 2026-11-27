@@ -86,7 +86,7 @@ while true; do
             # Render locally first; a failed USB redirection is handled by copy_result.
             local_result=/data/hmgapi/logs/phone-projection-tbt-capture/api-waiting.txt
             {
-                echo 'collector=stock-road-api-1.0.5'
+                echo 'collector=stock-road-api-1.0.0-rc.1'
                 echo "boot=$boot_id"
                 echo 'phase=waiting_for_current_boot_stock_process'
             } > "$local_result"
