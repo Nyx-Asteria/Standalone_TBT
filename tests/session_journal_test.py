@@ -74,6 +74,24 @@ public class JournalTest {
   j.start("retry recovery");Handler.drain();
   check(!orphan.exists()&&new File(dir,"session-orphan-interrupted.log").isFile(),"retry orphan recovery without restart");
   j.end("done");Handler.drain();
+  File failDir=new File(root,"retention");check(failDir.mkdir(),"retention fixture");
+  for(int k=0;k<15;k++){
+   String name=String.format("session-%03d",k);
+   File src=new File(failDir,name+".active");
+   Files.write(src.toPath(),"retained".getBytes("UTF-8"));
+   check(new File(failDir,name+"-interrupted.log").mkdir(),"block rename");
+   
+  }
+  SessionJournal retained=new SessionJournal(new Context(root),"retention");Handler.drain();
+  int count=0;
+  for(File f:failDir.listFiles())if(f.isFile()&&f.getName().endsWith(".active"))count++;
+  check(count==12,"orphan retention capped");
+  check(!new File(failDir,"session-000.active").exists()&&new File(failDir,"session-014.active").isFile(),"oldest orphan pruned first");
+  
+  retained.start("live after failure");Handler.drain();
+  count=0;for(File f:failDir.listFiles())if(f.isFile()&&f.getName().endsWith(".active"))count++;
+  check(count==13,"live session has independent slot");
+  retained.end("done");Handler.drain();
   System.out.println("Session journal recovery, redaction, timestamps, queue and write failure passed");
  }
 }""",
