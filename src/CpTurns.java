@@ -453,6 +453,7 @@ final class CpTurns {
     void disconnected() {
         stop("iAP2 disconnected");
         source = null;
+        Dipo.experimentalSourceChanged(null);
     }
 
     void stop(String reason) {
@@ -535,6 +536,7 @@ final class CpTurns {
             if ("Apple 지도".equals(s)) s = "Apple Maps";
             String was = source;
             source = s;
+            if (!s.equals(was)) Dipo.experimentalSourceChanged(s);
             if (was == null) {
                 Dipo.log("CarPlay: guidance source=" + s);
                 return;
@@ -565,6 +567,10 @@ final class CpTurns {
             Dipo.log(routeTrace);
             lastRouteStateTrace = routeTrace;
         }
+        LinkedHashMap<Integer, Maneuver> available = maneuvers.get(id);
+        boolean missing = u.state > 0 && (u.list == null || u.list.length == 0
+                || available == null || available.get(u.list[0]) == null);
+        Dipo.experimentalIncompleteWaze(source, missing, u.hasSupports && !u.supports);
         if (u.state < 0) {
             outputState("waiting for route state component=" + id);
             return;

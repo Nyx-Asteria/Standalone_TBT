@@ -41,6 +41,9 @@ public final class Dipo {
     private static final CpSessionLifecycle session = new CpSessionLifecycle();
     private static long lastSubscriptionAt = -10000;
     private static int lastSubscriptionGeneration = -1;
+    private static int experimentalStartupGeneration = -1;
+    private static int receivedPacketGeneration = -1;
+    private static final CpWazeRecovery wazeRecovery = new CpWazeRecovery();
     /** set while HMG-API itself calls the iAP2 server (its own route guidance restart) */
     static final ThreadLocal<Boolean> OWN = new ThreadLocal<Boolean>();
 
@@ -166,6 +169,7 @@ public final class Dipo {
                 if (lastSubscriptionGeneration == generation && now - lastSubscriptionAt < 750) return;
                 lastSubscriptionGeneration = generation;
                 lastSubscriptionAt = now;
+                experimentalStartup(generation);
                 traceComponents(service, reason);
                 if (!session.current(generation) || iap2 != service) return;
                 try {
@@ -174,6 +178,42 @@ public final class Dipo {
                 } catch (Throwable e) { error("CarPlay: " + reason + " route update request", e); }
             }
         }, delay);
+    }
+
+    // Opt-in only. A silent session gets one Start-only refresh; an identified Waze
+    // source with incomplete guidance gets at most two refreshes per source activation.
+    // Never invent a maneuver or override an explicit unsupported-source flag.
+    private static boolean experimentalEnabled() {
+        return mod.enabled() && mod.settingBoolean("experimental_waze_recovery", false);
+    }
+
+    private static void experimentalStartup(final int generation) {
+        if (!experimentalEnabled() || experimentalStartupGeneration == generation) return;
+        experimentalStartupGeneration = generation;
+        turnsHandler.postDelayed(new Runnable() { public void run() {
+            if (!experimentalEnabled() || !session.current(generation)
+                    || receivedPacketGeneration == generation) return;
+            requestSubscription("experimental silent-session refresh", 0);
+        }}, 5000);
+    }
+
+    static void experimentalSourceChanged(String source) {
+        wazeRecovery.sourceChanged(session.generation(), source);
+    }
+
+    static void experimentalIncompleteWaze(String source, boolean missing, boolean explicitlyUnsupported) {
+        if (!experimentalEnabled()) { wazeRecovery.cancel(); return; }
+        final int generation = session.generation();
+        if (!session.current(generation)) { wazeRecovery.cancel(); return; }
+        final int token = wazeRecovery.observe(generation, source, missing, explicitlyUnsupported);
+        if (token < 0) return;
+        turnsHandler.postDelayed(new Runnable() { public void run() {
+            if (!session.current(generation) || !experimentalEnabled()) return;
+            int attempt = wazeRecovery.fire(generation, token);
+            if (attempt == 0) return;
+            requestSubscription("experimental Waze incomplete guidance attempt=" + attempt, 0);
+            experimentalIncompleteWaze(wazeRecovery.source(), true, false);
+        }}, wazeRecovery.delay());
     }
 
     private static void turnByTurn() {
@@ -298,6 +338,7 @@ public final class Dipo {
                 public void run() {
                     if (session.generation() != receivedGeneration || !mod.enabled()) return;
                     if (receivedGeneration != 0 && !session.active()) return;
+                    receivedPacketGeneration = receivedGeneration;
                     int typeBit = 1 << (what - RG_UPDATE);
                     if ((seenTypes & typeBit) == 0) {
                         seenTypes |= typeBit;
