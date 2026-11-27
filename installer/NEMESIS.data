@@ -3,9 +3,9 @@ version=1.1
 id=hmgapi.standalone-tbt
 name=Standalone TBT
 type=application
-package-version=1.0.0-rc.1
+package-version=1.0.0-rc.2
 short-desc="HMG-API mod: Standalone TBT"
-detailed-desc="Standalone TBT 1.0.0-rc.1. CarPlay guidance and experimental Android Auto receiver. Some app and vehicle behavior is unverified."
+detailed-desc="Standalone TBT 1.0.0-rc.2. CarPlay guidance and experimental Android Auto receiver. Some app and vehicle behavior is unverified."
 os="any"
 models="any"
 depends="hmgapi@>=1.0.2"
