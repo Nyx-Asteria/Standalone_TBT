@@ -56,7 +56,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: Open-HMG/HMG-API
-          ref: a1830a83a8ad4bf3377be32e9064c5018947a2f6
+          ref: daa083717f07565ba16dc8a4d26291b7d68d3bf4
           path: .hmgapi-src
           persist-credentials: false
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78
