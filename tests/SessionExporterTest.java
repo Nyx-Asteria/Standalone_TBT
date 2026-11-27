@@ -97,6 +97,26 @@ public final class SessionExporterTest {
             put(mounts, "31 20 8:1 / " + usb.getCanonicalPath() + " rw - vfat /dev/block/sda1 rw\n");
             SessionExporter.exportOne(removable, dest, new SessionExporter.MountGuard(usb, mounts));
             check(new File(dest, removable.getName()).isFile(), "export resumes on mounted USB");
+            // Preserve coverage from the retired shell exporter: focused journals,
+            // interrupted finalized recordings and active-file exclusion.
+            File focused = new File(root, "focused");
+            check(focused.mkdir(), "focused spool");
+            File waze = new File(focused, "session-waze.log");
+            put(waze, "START Waze\nEND\n");
+            File active = new File(focused, "session-mapquest.active");
+            put(active, "START MapQuest\n");
+            File recovered = new File(spool, "session-102-interrupted.log");
+            put(recovered, "START\nEND interrupted\n");
+            SessionExporter.exportDirectory(spool, logs, "sessions");
+            SessionExporter.exportDirectory(focused, logs, "third-party-navigation");
+            File focusedDest = new File(logs, "third-party-navigation");
+            check(Arrays.equals(SessionExporter.digest(waze), SessionExporter.digest(new File(focusedDest, waze.getName()))), "focused export verified");
+            check(!new File(focusedDest, active.getName()).exists(), "focused active excluded");
+            check(!new File(dest, waze.getName()).exists(), "focused export isolated");
+            check(new File(dest, recovered.getName()).isFile() && recovered.isFile(), "interrupted finalized journal retained and exported");
+            check(active.renameTo(new File(focused, "session-mapquest.log")), "finalize focused fixture");
+            SessionExporter.exportDirectory(focused, logs, "third-party-navigation");
+            check(new File(focusedDest, "session-mapquest.log.complete").isFile(), "focused delayed finalization exported");
             // Simulate mount removal after the partial file opens, before its first chunk.
             File interrupted = new File(spool, "session-005.log");
             put(interrupted, "session during USB removal");
