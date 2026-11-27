@@ -51,6 +51,12 @@ jobs:
       - name: Session journal regression
         run: python3 tests/session_journal_test.py
 
+      - name: CPUL-derived session log policy regression
+        run: |
+          mkdir -p out/log-policy
+          javac --release 8 -d out/log-policy src/SessionLogPolicy.java src/PreSessionEvents.java tests/SessionLogPolicyTest.java
+          java -cp out/log-policy hmgapi.mods.projection.carplay.SessionLogPolicyTest
+
       - name: Java session export regression
         run: |
           mkdir -p out/session-export
