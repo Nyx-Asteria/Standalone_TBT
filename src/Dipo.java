@@ -32,6 +32,7 @@ public final class Dipo {
     static final String[] RG_COMPONENTS = { "RouteGuidanceComponent0" };
 
     private static SessionJournal journal;
+    private static SessionRecording recording;
     private static SessionJournal thirdPartyJournal;
     static ModContext mod;
     static LoadedApp app;
@@ -52,12 +53,14 @@ public final class Dipo {
     static void log(String m) {
         mod.log(m);
         if (journal != null) journal.record(m);
+        if (recording != null) recording.record(m);
         if(app!=null)CpInputTrace.record(app.context,m);
     }
 
     static void error(String m, Throwable t) {
         mod.error(m, t);
         if (journal != null) journal.record(m + " error=" + t.getClass().getSimpleName());
+        if (recording != null) recording.error(m + " error=" + t.getClass().getSimpleName());
         if(app!=null)CpInputTrace.record(app.context,m+" error="+t);
     }
 
@@ -71,6 +74,10 @@ public final class Dipo {
     public static void start(ModContext m, LoadedApp a) {
         mod = m;
         app = a;
+        if (a.context != null && recording == null) {
+            try { recording = new SessionRecording(a.context, "stbt-session-bundles", false); }
+            catch (Throwable t) { m.error("Directory session recorder unavailable", t); }
+        }
         if (a.context != null && journal == null) {
             try { journal = new SessionJournal(a.context, "stbt-carplay-sessions"); }
             catch (Throwable t) { m.error("Session journal unavailable", t); }
@@ -90,6 +97,7 @@ public final class Dipo {
                     session.end();
                     log("CarPlay: session finalized generation=" + session.generation());
                     if (journal != null) journal.end("session finalized");
+                    if (recording != null) recording.end("session finalized");
                     if (thirdPartyJournal != null) thirdPartyJournal.end("session finalized");
                     post(new Runnable() { public void run() {
                         if (!session.active()) turns.disconnected();
@@ -118,6 +126,7 @@ public final class Dipo {
                 }});
                 if (thirdPartyJournal != null) thirdPartyJournal.end("new CarPlay session");
                 if (journal != null) journal.beginAttempt("transport=" + (p.args.length > 0 ? p.args[0] : "unknown"));
+                if (recording != null) recording.beginAttempt("transport=" + (p.args.length > 0 ? p.args[0] : "unknown"));
                 log("CarPlay: session started generation=" + session.generation() + " wireless=" + session.wireless());
                 requestSubscription("session started", 1000);
             }
