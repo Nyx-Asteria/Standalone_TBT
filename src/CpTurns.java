@@ -544,9 +544,23 @@ final class CpTurns {
             if (was.equals(s)) return;
             Dipo.log("CarPlay: route guidance source changed from " + was + " to " + s + ", clearing turn-by-turn");
             stop("guidance source changed");
-            if (restart != null) new Thread(restart, "hmgapi-cp-rg-restart").start();
+            if (explicitUnsupportedSource(g)) {
+                Dipo.log("CarPlay: source explicitly unsupported; source-switch refresh skipped");
+            } else if (restart != null) new Thread(restart, "hmgapi-cp-rg-restart").start();
             return;
         }
+    }
+
+    /** Only an explicit false in this source-change packet vetoes refresh. */
+    private static boolean explicitUnsupportedSource(Iap2NotiMsg.Iap2ObjGroup group) {
+        for (int k = 0; k < group.getItemCnt(); k++) {
+            Iap2NotiMsg.Iap2ObjItem item = group.getObjItem(k);
+            if (item == null || item.getItemId() != 20 || item.getItemParamType() != 9
+                    || item.getItemObjCount() <= 0) continue;
+            int[] value = item.getItemIntArray();
+            if (value != null && value.length > 0) return value[0] == 0;
+        }
+        return false;
     }
 
     private String lastOutputState;
