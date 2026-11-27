@@ -226,6 +226,31 @@ public final class SessionExporterTest {
             SessionExporter.exportBundles(bundles,logs,new SessionExporter.MountGuard(usb,mounts));
             check(SessionExporter.verifiedBundleMarker(bundle),"torn marker repaired");
             check(!new File(bundle,".exported.part").exists(),"marker published atomically");
+            File snapshots=new File(root,"snapshots");check(snapshots.mkdir(),"snapshot spool");
+            File snapshot=new File(snapshots,"phone-projection-tbt.log");
+            File snapshotTarget=new File(logs,snapshot.getName());
+            File snapshotPart=new File(logs,snapshot.getName()+".snapshot-part");
+            put(snapshot,"first snapshot");
+            put(new File(snapshots,"unknown.bin"),"excluded");
+            final SessionExporter.MountGuard snapshotGuard=new SessionExporter.MountGuard(usb,mounts);
+            SessionExporter.exportSnapshots(snapshots,logs,snapshotGuard,false);
+            check(Arrays.equals(SessionExporter.digest(snapshot),SessionExporter.digest(snapshotTarget)),"snapshot verified");
+            check(!new File(logs,"unknown.bin").exists(),"unknown snapshot excluded");
+            put(snapshot,"next snapshot");
+            try{
+                SessionExporter.exportSnapshots(snapshots,logs,new SessionExporter.Guard(){
+                    public void check()throws IOException{
+                        if(snapshotPart.exists())put(mounts,"");
+                        snapshotGuard.check();
+                    }
+                },false);
+                throw new AssertionError("snapshot removal accepted");
+            }catch(IOException expected){}
+            check(new String(Files.readAllBytes(snapshotTarget.toPath()),"UTF-8").equals("first snapshot"),"previous snapshot retained");
+            check(snapshot.isFile()&&snapshotPart.exists(),"interrupted snapshot retained");
+            put(mounts,"43 20 8:1 / "+usb.getCanonicalPath()+" rw - vfat /dev/block/sda1 rw\n");
+            SessionExporter.exportSnapshots(snapshots,logs,new SessionExporter.MountGuard(usb,mounts),false);
+            check(!snapshotPart.exists()&&Arrays.equals(SessionExporter.digest(snapshot),SessionExporter.digest(snapshotTarget)),"snapshot retry and replacement verified");
             System.out.println("Java session export tests passed");
         } finally { remove(root); }
     } finally { for(java.security.Provider provider:providers) java.security.Security.addProvider(provider); }
