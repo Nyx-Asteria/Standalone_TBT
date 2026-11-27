@@ -10,7 +10,6 @@ public final class AaEnlargement {
  private final TollDisplay tollDisplay=new TollDisplay();
  private final JunctionTarget junctionTarget=new JunctionTarget();
  private final MapJunctionDisplay display=new MapJunctionDisplay();
- private final JunctionSpeed speed=new JunctionSpeed();
  private String lastTrace;
  private boolean linkageFailed;
  private void trace(String message) {
@@ -52,9 +51,8 @@ public final class AaEnlargement {
    float[] toll=tollDisplay.draw(facility,meters,now);
    trace("state=facility code="+facility+" enlarged="+(toll!=null));return toll;
   }
-  int limit=true
-      ?PhoneJunction.roadThreshold(type):JunctionHints.threshold(speed.read());
-  if(limit<=0){trace("state=waiting_speed");clear();return null;}
+  int limit=PhoneJunction.roadThreshold(type);
+  if(limit<=0){trace("state=unsupported_threshold");clear();return null;}
   tollDisplay.clear();
   float[] ramp=RampEnlargement.draw(type,junction,hasExit,exit,meters,limit);
   if(ramp!=null){trace("state=factory_exit");display.clear();release();return ramp;}

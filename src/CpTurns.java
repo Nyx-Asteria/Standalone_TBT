@@ -47,7 +47,6 @@ final class CpTurns {
     /** component id -> maneuver index -> maneuver (DiPO e/u.Am) */
     final LinkedHashMap<Integer, LinkedHashMap<Integer, Maneuver>> maneuvers = new LinkedHashMap<Integer, LinkedHashMap<Integer, Maneuver>>();
     String source;
-    final JunctionSpeed junctionSpeed = new JunctionSpeed();
     String lastJunctionTrial;
     boolean enlargementLinkageFailed;
     private final TollDisplay tollDisplay=new TollDisplay();
@@ -717,9 +716,7 @@ final class CpTurns {
             // Source name is diagnostic only; every projection app uses the same validation.
             String app = junctionApp;
             boolean allowed = supported;
-            boolean stockDistance = true;
-            float speed = allowed && !stockDistance ? junctionSpeed.read() : Float.NaN;
-            int limit = stockDistance ? PhoneJunction.roadThreshold(x.type) : JunctionHints.threshold(speed);
+            int limit = PhoneJunction.roadThreshold(x.type);
             float meters = JunctionHints.meters(dist, unit);
             if(enlarged==null){enlarged=RampEnlargement.draw(x.type,x.junction,x.hasExit,x.exit,meters,limit);
                 if(enlarged!=null){mapDisplay.clear();mapState="factory-exit";mapReason="phone-exit-kind-and-side";}}
@@ -754,8 +751,8 @@ final class CpTurns {
             if (enlarged==null && allowed && ((icon >= 65 && icon <= 71) || (icon >= 160 && icon <= 165)))
                 enlarged = PhoneJunction.drawAt(x.type, x.junction, x.hasExit, x.exit,
                         x.angles, meters, limit);
-            String trial = "app=" + app + " source=" + source + " speed=" + speed
-                    + " threshold=" + limit + " policy=" + (stockDistance ? "road" : "speed") + " distance=" + meters
+            String trial = "app=" + app + " source=" + source
+                    + " threshold=" + limit + " policy=road" + " distance=" + meters
                     + " hasExit=" + x.hasExit + " roads=" + (x.angles == null ? 0 : x.angles.length)
                     + " matched=" + (enlarged != null)+" method="+mapState+" reason="+mapReason
                     +" frame="+(enlarged==null?"none":java.util.Arrays.toString(enlarged));
