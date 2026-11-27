@@ -69,6 +69,11 @@ public class JournalTest {
   j.record("cannot write");j.end("failed");Handler.drain();
   check(blocked.isDirectory(),"failed sync must not publish completed file");
   check(blocked.delete(),"cleanup");
+  File orphan=new File(dir,"session-orphan.active");
+  Files.write(orphan.toPath(),"orphan".getBytes("UTF-8"));
+  j.start("retry recovery");Handler.drain();
+  check(!orphan.exists()&&new File(dir,"session-orphan-interrupted.log").isFile(),"retry orphan recovery without restart");
+  j.end("done");Handler.drain();
   System.out.println("Session journal recovery, redaction, timestamps, queue and write failure passed");
  }
 }""",
