@@ -47,6 +47,12 @@ jobs:
       - name: Session journal regression
         run: python3 tests/session_journal_test.py
 
+      - name: Java session export regression
+        run: |
+          mkdir -p out/session-export
+          javac --release 8 -d out/session-export src/SessionExporter.java tests/SessionExporterTest.java
+          java -cp out/session-export hmgapi.mods.sessionexport.SessionExporterTest
+
   package:
     runs-on: ubuntu-24.04
     steps:
