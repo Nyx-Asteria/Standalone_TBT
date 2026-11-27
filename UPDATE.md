@@ -1,9 +1,9 @@
-# Update and vehicle-test guide — 1.0.0-rc.1
+# Update and vehicle-test guide — 1.0.0-rc.3 (candidate)
 
 ## Upgrade
 1. Keep known-good packages and record current HMG-API, WCP and CPUL versions.
 2. Remove the original ch0iiih Phone Projection TBT package before installing this fork. Its identity is different; it is not an in-place upgrade.
-3. Disable WCP's cluster/HUD TBT setting, leaving wireless bridge and Now Playing enabled. Save/apply and restart.
+3. Explicitly disable WCP's **Integrated turn-by-turn** setting, leaving **Enable wireless CarPlay** on. Existing saved TBT=true values survive the default change; do not assume an upgrade disables TBT. Save/apply and restart before activating STBT. Verify only one guidance sender is enabled.
 4. Install the signed Standalone TBT package (same author key required for subsequent updates). Apply and restart. See [installation](wiki/Installation.md).
 5. Start with Experimental Waze guidance recovery OFF. Enable only for the second comparison and restart. Leave unrelated settings unchanged.
 
@@ -33,7 +33,7 @@ Collect the full TBT-LOGS folder, WCP logs and incremental firmware dumper RC4 i
 ## Rollback
 Disable experimental recovery and restart; if needed, remove this fork, apply removal and reinstall the known-good original. Use only one active TBT sender. WCP connectivity need not be changed.
 
-Source changes are not a verified signed release. Full compilation and vehicle testing remain pending.
+Source changes are not a verified signed release. Host compilation and package CI have passed; vehicle testing and final signed publication remain pending.
 
 ## Upcoming session logging (development source)
 
