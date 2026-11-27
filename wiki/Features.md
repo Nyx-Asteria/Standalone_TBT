@@ -1,199 +1,34 @@
-> 현재 일반 릴리즈: 1.0.5 (2026-11-18). 최신 호환성과 검증 대기 항목은 [[Compatibility]]를 확인해 주세요.
+# Features and settings
 
+Standalone TBT forwards received navigation data to the vehicle's NavigationCluster interface. CarPlay and Android Auto have separate input paths, with common OEM-style display concepts.
 
-# Features — 지원 기능
-
-[Home](Home) · [Compatibility](Compatibility) · [Known Issues](Known-Issues)
-
-HMG Phone Projection TBT에서 제공하는 주요 기능과 표시 방식을 설명합니다.
-
-이 모드는 Apple CarPlay 및 Android Auto 내비게이션에서 수신한 길안내 정보를 차량의 계기판과 HUD로 전달합니다.
-
----
-
-## 1. 지원 기능 요약
-
-| 기능 | CarPlay | Android Auto |
+| Feature | CarPlay | Android Auto |
 | --- | --- | --- |
-| 현재 TBT 안내 | ✅ 동작 확인 | ✅ 동작 확인 |
-| 다음 안내 | ✅ 구현 | 🔧 구현, 추가 검증 |
-| 현재 안내 지점 거리 | ✅ 구현 | ✅ 구현 |
-| 목적지 잔여 거리 | ✅ 구현 | ✅ 실차 확인 |
-| 한글 안내 문구 | ✅ 지원 | ✅ 실차 확인 |
-| 안내 종료 처리 | ✅ 지원 | ✅ 실차 확인 |
-| 차선 안내 | 🟡 일부 제한 | 🔧 추가 검증 |
-| 추천 차선 | 🟡 일부 제한 | 🔧 추가 검증 |
-| 계기판 출력 | ✅ 확인 | ✅ 확인 |
-| HUD 출력 | ✅ 확인 사례 | 차량별 검증 필요 |
+| Current turn, road name, maneuver distance | Implemented; upstream confirmed | Implemented; upstream confirmed |
+| Upcoming maneuvers | Implemented, data-dependent | Implemented, further app testing needed |
+| Trip distance and arrival time | Implemented | Implemented; remaining distance upstream confirmed |
+| Lane geometry and recommended lanes | Implemented, app-dependent | Implemented, further testing needed |
+| Cluster and HUD | Upstream examples confirmed | Cluster confirmed; HUD examples exist, vehicle-dependent |
+| Stock-map enlargement | Experimental | Experimental |
 
-**참고:** Android Auto의 목적지 잔여 거리, 한글 안내 및 안내 종료는 NAVER 지도와 TMAP 양쪽에서 정상 동작이 확인되었습니다.
+## Guidance and display
 
-전체 호환성은 [[Compatibility]]를 참고하세요.
+Current turn output includes the received direction, icon, distance and road or junction text. CarPlay supports up to three received upcoming turns; AA supports next-turn metadata when supplied. The renderer never invents missing turn directions or distances. Slight turns, sharp turns, road-end turns and roundabouts have fallback mappings. Special facilities such as tunnels and toll plazas depend on received identifiers or text. The standalone service-area icon remains unresolved.
 
----
+Lane arrows use gray for off-route directions, white for permissible directions and blue for recommended directions. Composite arrows retain per-direction state. Pocket markers require fresh compatible stock lane data matching count and directions. CarPlay includes a native lane fix guarded by library fingerprint. AA includes native receiver recipes and raw-packet handling for supplied lanes and upcoming turns; transient directionless notifications cannot replace a valid turn with a conflicting short distance.
 
-## 2. 현재 안내 (Current Maneuver)
+Stock display protection leases preserve phone guidance while monitoring OEM output. Route termination clears owned display state. Korean text and remaining distance were confirmed upstream with NAVER and TMAP AA; this does not establish identical results for every app.
 
-현재 진행 중인 경로 안내를 계기판의 TBT 영역에 표시합니다.
+## Settings
 
-앱에서 제공하는 정보에 따라 다음 내용을 표시할 수 있습니다.
+| Setting | Default | Behavior |
+| --- | --- | --- |
+| Android Auto turn-by-turn | On | Enables AA receiver; CarPlay has its own path. |
+| CarPlay / Android Auto junction enlargement | On | Experimental road geometry lookup; ordinary guidance if unavailable. |
+| Junction enlargement start distance | Road | Local roads 400 m / highway ramps 1,050 m; alternatively speed-based 100/400/500 m. These are upper limits, not guarantees. |
+| Toll plaza approach display | On | Experimental state and distance bar within 1 km for recognized toll maneuvers. |
+| Estimated arrival time format | 24-hour | 12-hour, 24-hour or vehicle system format. |
 
-- 회전 방향 및 안내 심볼
-- 안내 지점까지의 거리
-- 도로명 또는 교차로명
-- 일부 도로 시설 안내
+All settings require restart. Unknown map engine hashes disable native stock-map queries, not basic guidance. Roundabouts require sufficient branches and received exit information. No geometry is fabricated. Above 10 km integer distance is transmitted; the cluster controls decimal text. Leading-zero formatting is not selectable.
 
-회전 안내를 계기판에 표시하려면 앱이 관련 안내 정보를 제공하고, 계기판에 대응하는 표시 유형이 존재해야 합니다.
-
-### 특수 안내
-
-회전교차로, 요금소, 터널 등 일부 특수 안내에 대한 변환 기능을 포함합니다.
-
-다만 앱에서 시설 종류를 구분할 정보를 제공하지 않으면 일반 회전으로 표시될 수 있습니다.
-
----
-
-## 3. 다음 안내 (Upcoming Maneuver)
-
-현재 안내 이후의 다음 경로 안내 정보를 계기판에 전달합니다.
-
-다음 안내에 필요한 방향 및 거리 정보는 내비게이션 앱에서 수신해야 합니다.
-
-CarPlay에서는 다양한 회전 유형에 대한 다음 안내 변환이 구현되어 있습니다.
-
-v0.1.58에서는 다음 유형의 대체 처리를 보완했습니다.
-
-- 완만한 좌·우회전
-- 급회전
-- 도로 끝 회전
-- 경로 시작 시 안내 정보 유지
-
-Android Auto에도 다음 안내 수신 경로가 구현되어 있으나, NAVER 지도와 TMAP의 안정적인 다음 안내 표시는 추가 검증 대상입니다.
-
-**모드는 수신하지 않은 안내 방향이나 거리를 임의로 생성하지 않습니다.**
-
----
-
-## 4. 거리 표시
-
-### 안내 지점 거리
-
-현재 회전 또는 안내 지점까지의 남은 거리를 표시합니다.
-
-### 목적지 잔여 거리
-
-최종 목적지까지의 남은 거리를 계기판 출력 형식으로 전달합니다.
-
-**Android Auto NAVER 지도와 TMAP에서는 목적지 잔여 거리의 정상 표시가 실차에서 확인되었습니다.**
-
-표시 가능한 거리와 단위는 앱에서 전달되는 정보 및 차량의 표시 형식에 따라 달라질 수 있습니다.
-
----
-
-## 5. 차선 안내 (Lane Guidance)
-
-Phone Projection 앱에서 전달된 차선 데이터를 차량 계기판의 차선 표시 형식으로 변환합니다.
-
-### 차선 색상
-
-| 색상 | 의미 |
-| --- | --- |
-| 회색 | 경로에서 벗어나는 방향 |
-| 흰색 | 경로상 주행 가능한 방향 |
-| 파란색 | 내비게이션 앱에서 추천하는 방향 |
-
-복합 차선에서는 각 화살표의 방향별로 상태를 구분하도록 구현되어 있습니다.
-
-### 복합 차선
-
-다음과 같이 하나의 차선에 여러 진행 방향이 포함되는 경우도 처리합니다.
-
-- 직진 + 좌회전
-- 직진 + 우회전
-- 좌회전 + 유턴
-- 기타 수신된 복합 방향
-
-v0.1.55에서는 TMAP의 기록된 직좌·직우 차선 변환 문제를 수정했습니다.
-
-### 포켓 차선
-
-순정 내비게이션에서 수신한 차선 정보와 Phone Projection의 차선 구성이 일치하면 일부 포켓 차선 표시를 보완할 수 있습니다.
-
-다만 다음 조건이 필요합니다.
-
-- 최신 순정 차선 데이터가 존재할 것
-- 차선 수가 일치할 것
-- 차선 방향 구성이 호환될 것
-
-해당 조건을 충족하지 않으면 포켓 차선 표시가 제한될 수 있습니다.
-
----
-
-## 6. 계기판 및 HUD 출력
-
-Phone Projection TBT는 차량의 `NavigationCluster` 인터페이스를 이용해 안내 정보를 전달합니다.
-
-CarPlay와 Android Auto는 서로 다른 수신 경로를 사용하지만 최종적으로 계기판 출력 계층을 공유합니다.
-
-차량에 HUD가 있다면 안내 정보가 HUD에도 출력될 수 있습니다.
-
-현재 다음과 같은 사례가 있습니다.
-
-- Palisade LX2 PE: 개발 및 계기판 TBT 시험
-- Stinger Meister: 유선·무선 CarPlay NAVER 지도 계기판 및 HUD 정상 동작 확인
-
-차량마다 계기판과 HUD의 지원 기능이 다를 수 있으므로 각 표시 장치의 호환성은 별도로 판단해야 합니다.
-
----
-
-## 7. 한글 안내 및 안내 종료
-
-Android Auto의 한글 문구 처리 및 경로 안내 종료 기능이 구현되어 있습니다.
-
-최신 실차 시험에서는 NAVER 지도와 TMAP 모두 다음 동작이 정상적으로 확인되었습니다.
-
-- 한글 도로명 및 안내 문구 표시
-- 목적지 잔여 거리 표시
-- 경로 안내 종료
-- 안내 종료 이후 계기판 상태 정리
-
-이전에 보고된 한글 마지막 글자 손상 및 안내 종료 로딩 현상은 최신 시험에서 정상 동작한 것으로 확인되었습니다.
-
----
-
-## 확대 안내 및 최신 표시 정책
-
-설정에서 확대 안내 시험 기능을 켜면 순정 지도 엔진에서 도로 연결 정보를 조회해 교차로 형상을 구성합니다. 기본 TBT는 지도 엔진 조회 없이도 작동합니다. 지도 조회는 두 검증 해시에서만 허용하며, 연결 정보가 불완전하면 기본 방향 안내를 유지합니다.
-
-DN8 HEV에서 계기판·HUD 확대와 거리 막대가 표시되는 것을 사용자가 확인했습니다. 요금소명 재전송·확대 유지, 진출로 파란 경로, 회전교차로 가지의 최신 수정은 실차 재검증이 필요합니다. 400/1050m는 확대 거리 상한으로, 형상 대응이 확보된 시점에 시작합니다.
-
-AA 좌측 갈림길은 10시 방향으로 복원했습니다. 같은 안내에서 지명만 바뀌면 문구를 즉시 갱신하고, 요금소명·금액 교대 시 시설 문맥을 제한된 시간 동안 유지합니다. 도착 예정 시간은 12시간·24시간·차량 설정 중 선택할 수 있으며 10km 이상 거리에는 정수값을 전달합니다. `.0` 표시 여부는 차량 UI가 결정합니다.
-
-## 8. 현재 개선 중인 기능
-
-다음 기능은 구현 또는 추가 분석이 진행 중입니다.
-
-| 기능 | 상태 |
-| --- | --- |
-| 휴게소 단독 심볼 | 미해결 |
-| 일부 요금소 및 터널 심볼 | 개선·검증 필요 |
-| 고가도로 / 지하차도 구분 | 앱별 데이터에 따라 제한 |
-| 일부 회전교차로 도식 | 검증 필요 |
-| CarPlay TMAP 일부 차선 표현 | 개선 필요 |
-| Android Auto 다음 안내 | 검증 필요 |
-| Android Auto 추천 차선 | 검증 필요 |
-
-기능별 상세 제한 사항은 [[Known-Issues]]에 정리되어 있습니다.
-
----
-
-## 관련 문서
-
-- [[Compatibility]] — 차량 및 내비게이션 앱 호환성
-- [[Known-Issues]] — 알려진 문제 및 미해결 기능
-- [[Troubleshooting]] — 기능이 동작하지 않을 때
-- [[Development]] — 구현 구조 및 개발 정보
-
-## 1.0.5 설정 및 동작
-
-도착 예정 시간은 **도착 예정 시간 표시**에서12시간·24시간·차량 시간 설정을 선택하고 적용·재시작해 주세요. 앞자리0과 거리의 `.0` 자릿수 선택은 지원하지 않습니다. 도로 가지가 없는 빈 회전교차로 확대는 보내지 않고 일반 안내를 유지합니다. 요금소의 같은 상태도 재전송하며, 방향 없는 임시 안내에 물리적으로 충돌하는 짧은 거리가 섞이면 원래 회전을 유지합니다. CN7 PE 시작 신호 시험 기능은 삭제했습니다.
+See [compatibility](../COMPATIBILITY.md) and [known issues](Known-Issues.md).

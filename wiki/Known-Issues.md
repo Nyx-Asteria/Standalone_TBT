@@ -1,14 +1,12 @@
-# 알려진 제한 — 1.0.5
+# Known issues and limitations
 
+- Enlargement thresholds are upper bounds; shape and maneuver matching must succeed. Some T-junction approaches have missing or differing branches; traffic islands are not a confirmed cause.
+- Roundabouts fall back to ordinary guidance when geometry is incomplete. Toll-state refresh and highway exit blue-path fixes need further vehicle retesting.
+- AA left forks use the upstream 10 o'clock mapping (71/330), independently of ramp classification.
+- Arrival-time format is selectable; leading zero and decimal formatting are controlled by vehicle UI. A straight HUD arrow can remain when the next turn is at least 3 km away.
+- Service-area standalone artwork remains unresolved; special facility distinctions depend on received data.
+- Upcoming turns, recommended lanes and pocket markers are app- and vehicle-dependent. Missing data is not invented.
+- US K5 native map engine compatibility is unverified; basic TBT is separate.
+- WCP TBT must be off. Wireless guidance reattachment improvements remain planned. The fork has not yet been car-tested.
 
-
-- 일반 교차로 확대의 400/1050m 설정은 거리 상한입니다. 지도 형상과 현재 안내의 대응이 확보되어야 하므로 해당 거리에서 항상 시작하지 않습니다.
-- 일부 삼거리에서 진입 방향별로 가지가 다르거나 확대가 생략되는 문제가 제보되었습니다. 교통섬 존재를 원인으로 확정하지 않았습니다.
-- 회전교차로는 완전한 연결 정보가 확보된 경우에만 가지를 구성합니다. 불완전하면 방향 안내를 유지합니다.
-- 요금소명, 요금소 확대 유지, 고속도로 진출로의 파란 경로 수정은 재현 시험을 통과했으나 최신 수정 이후 실차 재검증이 필요합니다.
-- AA 좌측 갈림길은 사용자 요청대로 10시 방향 표현(71/330)으로 복원했습니다. 진출입로 분류는 별도로 유지합니다.
-- 도착 예정 시간은 12시간·24시간·차량 설정 중 선택할 수 있습니다. 10km 이상 거리는 정수값을 전달합니다. 화면의 `.0` 표시 여부는 차량 UI가 결정합니다.
-- 다음 안내까지 3km 이상일 때 HUD 직진 표시는 차량 동작에 따라 남을 수 있습니다.
-- 앱이 보내지 않은 차선·유가·요금 정보를 만들어 내지 않습니다. 복수 지명·금액 교대 안내 동기화는 실차 추가 확인이 필요합니다.
-
-최종 검토: 2026-11-17. 호환성 제보에는 차종·연식·전체 펌웨어·앱·연결 방식·TBT 버전·증상 시각을 포함해 주세요. 로그에는 도로명과 위치가 포함될 수 있으므로 공개 전에 확인해 주세요.
+See [compatibility](../COMPATIBILITY.md) and [log collection](Logs-and-Issue-Reporting.md).
