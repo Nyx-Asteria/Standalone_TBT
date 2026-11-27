@@ -17,7 +17,7 @@ def build(package: Path, output: Path):
             if z.read('mod/id').decode().strip()!=info['id']:raise ValueError('mod ID mismatch')
             version=info['version']
     launcher=f'[nemesis]\nversion=1.0\ntype=install\npath={package.name}\n'
-    readme=f'''Phone Projection TBT {version} - NEMESIS USB 설치\n\n1. HMG-API 1.0.2 이상을 먼저 설치하고 Hooks on (map checked)를 확인하세요.\n2. 이 USB 설치 묶음만 압축 해제하세요.\n3. NEMESIS.data와 {package.name}을 USB 최상위에 함께 넣으세요.\n   두 파일이 별도 하위 폴더 안에 들어가면 안 됩니다.\n4. 안쪽 {package.name}은 압축 해제하지 마세요.\n5. USB를 연결하고 NEMESIS 설치 확인창에서 설치를 진행하세요.\n6. 완료 후 헤드유닛을 재시작하세요.\n\nNEMESIS.data는 USB 실행용(type=install)입니다.\n안쪽 ZIP의 NEMESIS.data(type=application)는 패키지 관리용이며 USB 루트용이 아닙니다.\n\n이미 TBT가 설치되어 있다면 일반 업데이트 ZIP을 압축 해제 없이\nHMGAPI/updates/에 넣고 HMG-API에서 업데이트하세요.\n'''
+    readme=f'''Standalone TBT {version} - NEMESIS USB installation\n\n1. Install HMG-API 1.0.2 or newer and verify Hooks on (map checked).\n2. Extract only this outer USB installer ZIP.\n3. Place NEMESIS.data and {package.name} together at the USB root, not in a subfolder.\n4. Do not extract {package.name}.\n5. Connect the USB drive and confirm installation in NEMESIS.\n6. Restart the head unit.\n\nThe outer NEMESIS.data is type=install. The inner ZIP uses type=application and must not be extracted to the USB root.\n\nFor updates, place the signed update ZIP unopened in HMGAPI/updates/ and update through HMG-API. Remove the upstream Phone Projection TBT package before installing this fork. Disable WCP TBT to avoid duplicate senders.\n'''
     output.parent.mkdir(parents=True,exist_ok=True)
     with zipfile.ZipFile(output,'w',zipfile.ZIP_STORED) as z:
         z.writestr('NEMESIS.data',launcher)
