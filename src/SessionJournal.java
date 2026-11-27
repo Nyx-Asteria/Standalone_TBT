@@ -88,6 +88,7 @@ final class SessionJournal {
             if (!append(active, "", true)) writeFailed = true;
             if (writeFailed && !append(active, row("LOGGER incomplete recording: disk write failed"), true)) {
                 active = null;
+                prune();
                 return;
             }
             File completed = new File(dir, active.getName().replace(".active", writeFailed ? "-interrupted.log" : ".log"));
@@ -140,12 +141,33 @@ final class SessionJournal {
         for (File f : files) {
             if (!f.isFile() || !f.getName().endsWith(".active")) continue;
             File target = new File(dir, f.getName().replace(".active", "-interrupted.log"));
-            if (!target.exists() && append(f, row("END interrupted process/service restart or failed finalization"), true))
+            // Bound recovery growth even when the final rename repeatedly fails.
+            if (!target.exists() && append(f, f.length() < LIMIT ? row("END interrupted process/service restart or failed finalization") : "", true))
                 f.renameTo(target);
         }
     }
 
+    /** Keep failed recordings separate from the completed retention budget. */
+    private void pruneOrphans() {
+        File[] files = dir.listFiles(new FilenameFilter() {
+            public boolean accept(File d, String n) {
+                return n.startsWith("session-") && n.endsWith(".active") && new File(d, n).isFile();
+            }
+        });
+        if (files == null || files.length <= KEEP) return;
+        Arrays.sort(files, new Comparator<File>() {
+            public int compare(File a, File b) { return a.getName().compareTo(b.getName()); }
+        });
+        for (int i = 0; i < files.length - KEEP; i++) {
+            File f = files[i];
+            if (f.equals(active)) continue;
+            
+            f.delete();
+        }
+    }
+
     private void prune() {
+        pruneOrphans();
         File[] files = dir.listFiles(new FilenameFilter() {
             public boolean accept(File d, String n) { return n.endsWith(".log"); }
         });
