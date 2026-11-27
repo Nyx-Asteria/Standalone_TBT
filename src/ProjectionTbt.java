@@ -142,6 +142,32 @@ public final class ProjectionTbt extends ModEntry {
 
                     @Override
                     protected synchronized void afterHookedMethod(Param p) {
+                        if (p.getThrowable() != null) {
+                            mod.error("Native display " + name, p.getThrowable());
+                            return;
+                        }
+                        if (name.equals("updateTBTInfo") && arity == 9) {
+                            if (mod.settingBoolean("junction_trial", true) && p.getThrowable() == null) {
+                                try {
+                                    StringBuilder frame = new StringBuilder().append(android.os.SystemClock.elapsedRealtime());
+                                    for (Object arg : p.args) frame.append(',').append(arg);
+                                    Settings.Global.putString(app.context.getContentResolver(),
+                                            hmgapi.mods.projection.carplay.JunctionHints.KEY, frame.toString());
+                                } catch (RuntimeException error) { /* Optional trial must not affect stock navigation. */ }
+                            }
+                        }
+                        if (mod.settingBoolean("junction_capture", true)
+                                && (name.equals("updateTBTInfo") || name.equals("updateTPCrossroadName"))) {
+                            String capture = guidanceSnapshot(p.args);
+                            if (!capture.equals(lastJunction)) {
+                                lastJunction = capture;
+                                mod.log("Junction capture api elapsed=" + android.os.SystemClock.elapsedRealtime()
+                                        + " method=" + name + " args=" + capture
+                                        + " completed=" + (p.getThrowable() == null));
+                            }
+                        }
+                        if (!mod.settingBoolean("verbose_diagnostics", false)) return;
+                        if (name.equals("sendNaviClusterHandlerMessage")) return;
                         String detail = "";
                         if (name.equals("updateLaneInfo") && arity == 1 && p.args[0] instanceof byte[]) {
                             detail = " frame=" + java.util.Arrays.toString((byte[]) p.args[0]);
@@ -165,37 +191,12 @@ public final class ProjectionTbt extends ModEntry {
                             }
                         } else if (name.equals("updateTBTInfo") && arity == 9) {
                             detail = " args=" + java.util.Arrays.toString(p.args);
-                            if (mod.settingBoolean("junction_trial", true) && p.getThrowable() == null) {
-                                try {
-                                    StringBuilder frame = new StringBuilder().append(android.os.SystemClock.elapsedRealtime());
-                                    for (Object arg : p.args) frame.append(',').append(arg);
-                                    Settings.Global.putString(app.context.getContentResolver(),
-                                            hmgapi.mods.projection.carplay.JunctionHints.KEY, frame.toString());
-                                } catch (RuntimeException error) { /* Optional trial must not affect stock navigation. */ }
-                            }
                         } else if ((!name.startsWith("update"))
                                 && p.args.length > 0
                                 && (p.args[0] instanceof Number || p.args[0] instanceof Boolean)) {
                             detail = " first=" + p.args[0];
                         }
-                        // Keep all preceding publication/suppression behavior intact.
-                        if (p.getThrowable() != null) {
-                            mod.error("Native display " + name, p.getThrowable());
-                            return;
-                        }
-                        if (!mod.settingBoolean("verbose_diagnostics", false)) return;
-                        if (name.equals("sendNaviClusterHandlerMessage")) return;
                         String result = detail + " completed=true";
-                        if (mod.settingBoolean("junction_capture", true)
-                                && (name.equals("updateTBTInfo") || name.equals("updateTPCrossroadName"))) {
-                            String capture = guidanceSnapshot(p.args);
-                            if (!capture.equals(lastJunction)) {
-                                lastJunction = capture;
-                                mod.log("Junction capture api elapsed=" + android.os.SystemClock.elapsedRealtime()
-                                        + " method=" + name + " args=" + capture
-                                        + " completed=" + (p.getThrowable() == null));
-                            }
-                        }
                         long now = android.os.SystemClock.elapsedRealtime();
                         if (result.equals(previous)) return;
                         previous = result;

@@ -71,8 +71,11 @@ public final class Dipo {
     public static void start(ModContext m, LoadedApp a) {
         mod = m;
         app = a;
-        if (a.context != null) journal = new SessionJournal(a.context, "stbt-carplay-sessions");
-        if (a.context != null && m.settingBoolean("third_party_navigation_trace", false)) {
+        if (a.context != null && journal == null) {
+            try { journal = new SessionJournal(a.context, "stbt-carplay-sessions"); }
+            catch (Throwable t) { m.error("Session journal unavailable", t); }
+        }
+        if (a.context != null && thirdPartyJournal == null && m.settingBoolean("third_party_navigation_trace", false)) {
             try { thirdPartyJournal = new SessionJournal(a.context, "stbt-third-party-navigation"); }
             catch (Throwable t) { m.error("Third-party navigation trace unavailable", t); }
         }
@@ -114,7 +117,7 @@ public final class Dipo {
                     if (session.current(generation)) turns.disconnected();
                 }});
                 if (thirdPartyJournal != null) thirdPartyJournal.end("new CarPlay session");
-                if (journal != null) journal.start("transport=" + (p.args.length > 0 ? p.args[0] : "unknown"));
+                if (journal != null) journal.beginAttempt("transport=" + (p.args.length > 0 ? p.args[0] : "unknown"));
                 log("CarPlay: session started generation=" + session.generation() + " wireless=" + session.wireless());
                 requestSubscription("session started", 1000);
             }
