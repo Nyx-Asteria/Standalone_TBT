@@ -54,8 +54,7 @@
       "restart": true
     },
     {
-      "name": "carplay-session-export",
-      "script": "export-sessions.sh",
+      "name": "stbt-session-export", "jar": "hooks.jar", "class": "hmgapi.mods.sessionexport.SessionExporter", "args": ["stbt"],
       "user": "root",
       "start": "android",
       "restart": true
