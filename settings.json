@@ -2,70 +2,6 @@
   "version": 1,
   "settings": [
     {
-      "key": "android_auto_tbt",
-      "type": "toggle",
-      "default": true,
-      "apply": "restart",
-      "title": "Android Auto turn-by-turn",
-      "description": "Show Android Auto navigation on the instrument cluster. Do not enable TBT in another mod at the same time."
-    },
-    {
-      "key": "stock_map_junction",
-      "type": "toggle",
-      "default": true,
-      "apply": "restart",
-      "title": "CarPlay / Android Auto junction enlargement (experimental)",
-      "description": "Enable enlarged guidance for any navigation app when stock road geometry matches the phone's direction and distance. Roundabouts use the received exit angle. If data is insufficient, retain normal TBT."
-    },
-    {
-      "key": "phone_junction_distance",
-      "type": "choice",
-      "default": "road",
-      "apply": "restart",
-      "title": "Junction enlargement start distance",
-      "description": "Choose road-type or speed-based thresholds. Normal TBT remains active where road geometry cannot be verified.",
-      "options": [
-        {
-          "value": "road",
-          "title": "Local roads: 400 m / highway ramps: 1,050 m"
-        },
-        {
-          "value": "speed",
-          "title": "Speed-based: 100 / 400 / 500 m"
-        }
-      ]
-    },
-    {
-      "key": "toll_enlargement",
-      "type": "toggle",
-      "default": true,
-      "apply": "restart",
-      "title": "Toll plaza approach display (experimental)",
-      "description": "When a maneuver is identified as a toll plaza within 1 km, send the stock toll display state and distance bar. Identification may fail if the app supplies no toll information."
-    },
-    {
-      "key": "arrival_time_format",
-      "type": "choice",
-      "default": "24",
-      "apply": "restart",
-      "title": "Estimated arrival time format",
-      "description": "Choose 12-hour, 24-hour or vehicle time settings. Leading zeros and distance decimal formatting cannot be changed here.",
-      "options": [
-        {
-          "value": "24",
-          "title": "24-hour (23:00)"
-        },
-        {
-          "value": "12",
-          "title": "12-hour (11:00 PM)"
-        },
-        {
-          "value": "system",
-          "title": "Match vehicle time settings"
-        }
-      ]
-    },
-    {
       "key": "experimental_waze_recovery",
       "type": "toggle",
       "default": false,
@@ -78,16 +14,8 @@
       "type": "toggle",
       "default": false,
       "apply": "restart",
-      "title": "Verbose navigation diagnostics",
-      "description": "Enable detailed decoded packets and stock display traces for troubleshooting. Normal logging retains lifecycle, source capability, route transitions and errors. Logs may contain private route details."
-    },
-    {
-      "key": "third_party_navigation_trace",
-      "type": "toggle",
-      "default": false,
-      "apply": "restart",
-      "title": "Third-party navigation research trace",
-      "description": "Record separate Waze, MapQuest and other identified third-party CarPlay navigation packet summaries. Excludes known Apple Maps and Google Maps source names and omits road/destination text. Export completed traces to USB."
+      "title": "Extended navigation diagnostics",
+      "description": "Collect detailed decoded navigation packets, cluster display traces and separate third-party research traces for automatic USB export. Basic session logging remains automatic. Detailed logs may contain private route information."
     }
   ]
 }

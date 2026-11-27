@@ -761,7 +761,7 @@ final class AaTurns {
             hour = c.get(Calendar.HOUR_OF_DAY);
             minute = c.get(Calendar.MINUTE);
             timeType = 1;
-            timeFormat = hmgapi.mods.projection.carplay.DisplayFormat.arrivalFormat(diagnostics==null?"24":diagnostics.settingString("arrival_time_format","24"),context);
+            timeFormat = hmgapi.mods.projection.carplay.DisplayFormat.arrivalFormat("12",context);
         }
         cluster.tbtSubInfo(hmgapi.mods.projection.carplay.DisplayFormat.distance(whole + tenths / 10f,cu), 0, cu, hour, minute, timeType, timeFormat, 0f, -1, estPoint);
         scheduleTick();

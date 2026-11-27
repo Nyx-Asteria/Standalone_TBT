@@ -702,12 +702,12 @@ final class CpTurns {
         if(junctionApp==null || junctionApp.isEmpty())junctionApp="CarPlay";
         boolean supported=StockMapJunction.allowedApp(junctionApp);
         float phoneMeters=JunctionHints.meters(dist,unit);
-        boolean mapEnabled=!enlargementLinkageFailed && Dipo.mod.settingBoolean("stock_map_junction",true);
+        boolean mapEnabled=!enlargementLinkageFailed;
         String mapTurnToken=junctionTarget.select(junctionApp+"/"+id+"/"+x.type+"/"+x.junction+"/"+x.side+"/"+x.hasExit+"/"+x.exit,SystemClock.elapsedRealtime(),phoneMeters);
         mapRequestedKind=(x.junction==1||x.type==6||x.type==7)&&x.side==0?1:0;
         mapRequestedMeters=phoneMeters;mapRequestedId=StockMapJunction.targetId(mapTurnToken);
         requestMap(mapEnabled && StockMapJunction.requestedRange(junctionApp,phoneMeters,PhoneJunction.roadThreshold(x.type)));
-        float[] enlarged = mapEnabled && supported && Dipo.mod.settingBoolean("toll_enlargement",true)
+        float[] enlarged = mapEnabled && supported
                 ? tollDisplay.draw(icon,phoneMeters,SystemClock.elapsedRealtime()):null;
         if(icon!=178&&icon!=184)tollDisplay.clear();
         String mapState=enlarged!=null?"toll": "none";
@@ -717,7 +717,7 @@ final class CpTurns {
             // Source name is diagnostic only; every projection app uses the same validation.
             String app = junctionApp;
             boolean allowed = supported;
-            boolean stockDistance = "road".equals(Dipo.mod.settingString("phone_junction_distance", "road"));
+            boolean stockDistance = true;
             float speed = allowed && !stockDistance ? junctionSpeed.read() : Float.NaN;
             int limit = stockDistance ? PhoneJunction.roadThreshold(x.type) : JunctionHints.threshold(speed);
             float meters = JunctionHints.meters(dist, unit);
@@ -1107,7 +1107,7 @@ final class CpTurns {
             hour = cal.get(Calendar.HOUR_OF_DAY);
             minute = cal.get(Calendar.MINUTE);
             timeType = 1;
-            timeFormat = DisplayFormat.arrivalFormat(Dipo.mod==null?"24":Dipo.mod.settingString("arrival_time_format","24"),context);
+            timeFormat = DisplayFormat.arrivalFormat("12",context);
         } else {
             timeFormat = -1;
         }

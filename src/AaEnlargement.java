@@ -45,14 +45,14 @@ public final class AaEnlargement {
  private float[] drawChecked(String token,int type,int junction,int side,boolean hasExit,int exit,
          String road,float meters) {
   long now=SystemClock.elapsedRealtime();
-  if(mod==null || !mod.settingBoolean("stock_map_junction",true)) {trace("state=disabled");clear();return null;}
+  if(mod==null) {trace("state=disabled");clear();return null;}
   int facility=facility(type,junction,exit,road);
   if(facility==178 || facility==184 || facility==183) {
    display.clear();release();
-   float[] toll=mod.settingBoolean("toll_enlargement",true)?tollDisplay.draw(facility,meters,now):null;
+   float[] toll=tollDisplay.draw(facility,meters,now);
    trace("state=facility code="+facility+" enlarged="+(toll!=null));return toll;
   }
-  int limit="road".equals(mod.settingString("phone_junction_distance","road"))
+  int limit=true
       ?PhoneJunction.roadThreshold(type):JunctionHints.threshold(speed.read());
   if(limit<=0){trace("state=waiting_speed");clear();return null;}
   tollDisplay.clear();
