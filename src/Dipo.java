@@ -64,7 +64,7 @@ public final class Dipo {
     public static void mapSettingsChanged(final ModContext context) {
         if(mod==null || turnsHandler==null || turns==null)return;
         mod=context;
-        log("Projection enlargement settings enabled="+mod.settingBoolean("stock_map_junction",true));
+        log("Projection enlargement enabled");
         turnsHandler.post(new Runnable(){public void run(){turns.mapSettingsChanged();}});
     }
     /** Wireless.appLoaded, in DiPO's process */
@@ -75,7 +75,7 @@ public final class Dipo {
             try { journal = new SessionJournal(a.context, "stbt-carplay-sessions"); }
             catch (Throwable t) { m.error("Session journal unavailable", t); }
         }
-        if (a.context != null && thirdPartyJournal == null && m.settingBoolean("third_party_navigation_trace", false)) {
+        if (a.context != null && thirdPartyJournal == null && m.settingBoolean("verbose_diagnostics", false)) {
             try { thirdPartyJournal = new SessionJournal(a.context, "stbt-third-party-navigation"); }
             catch (Throwable t) { m.error("Third-party navigation trace unavailable", t); }
         }

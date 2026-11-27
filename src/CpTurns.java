@@ -47,7 +47,6 @@ final class CpTurns {
     /** component id -> maneuver index -> maneuver (DiPO e/u.Am) */
     final LinkedHashMap<Integer, LinkedHashMap<Integer, Maneuver>> maneuvers = new LinkedHashMap<Integer, LinkedHashMap<Integer, Maneuver>>();
     String source;
-    final JunctionSpeed junctionSpeed = new JunctionSpeed();
     String lastJunctionTrial;
     boolean enlargementLinkageFailed;
     private final TollDisplay tollDisplay=new TollDisplay();
@@ -702,12 +701,12 @@ final class CpTurns {
         if(junctionApp==null || junctionApp.isEmpty())junctionApp="CarPlay";
         boolean supported=StockMapJunction.allowedApp(junctionApp);
         float phoneMeters=JunctionHints.meters(dist,unit);
-        boolean mapEnabled=!enlargementLinkageFailed && Dipo.mod.settingBoolean("stock_map_junction",true);
+        boolean mapEnabled=!enlargementLinkageFailed;
         String mapTurnToken=junctionTarget.select(junctionApp+"/"+id+"/"+x.type+"/"+x.junction+"/"+x.side+"/"+x.hasExit+"/"+x.exit,SystemClock.elapsedRealtime(),phoneMeters);
         mapRequestedKind=(x.junction==1||x.type==6||x.type==7)&&x.side==0?1:0;
         mapRequestedMeters=phoneMeters;mapRequestedId=StockMapJunction.targetId(mapTurnToken);
         requestMap(mapEnabled && StockMapJunction.requestedRange(junctionApp,phoneMeters,PhoneJunction.roadThreshold(x.type)));
-        float[] enlarged = mapEnabled && supported && Dipo.mod.settingBoolean("toll_enlargement",true)
+        float[] enlarged = mapEnabled && supported
                 ? tollDisplay.draw(icon,phoneMeters,SystemClock.elapsedRealtime()):null;
         if(icon!=178&&icon!=184)tollDisplay.clear();
         String mapState=enlarged!=null?"toll": "none";
@@ -717,9 +716,7 @@ final class CpTurns {
             // Source name is diagnostic only; every projection app uses the same validation.
             String app = junctionApp;
             boolean allowed = supported;
-            boolean stockDistance = "road".equals(Dipo.mod.settingString("phone_junction_distance", "road"));
-            float speed = allowed && !stockDistance ? junctionSpeed.read() : Float.NaN;
-            int limit = stockDistance ? PhoneJunction.roadThreshold(x.type) : JunctionHints.threshold(speed);
+            int limit = PhoneJunction.roadThreshold(x.type);
             float meters = JunctionHints.meters(dist, unit);
             if(enlarged==null){enlarged=RampEnlargement.draw(x.type,x.junction,x.hasExit,x.exit,meters,limit);
                 if(enlarged!=null){mapDisplay.clear();mapState="factory-exit";mapReason="phone-exit-kind-and-side";}}
@@ -754,8 +751,8 @@ final class CpTurns {
             if (enlarged==null && allowed && ((icon >= 65 && icon <= 71) || (icon >= 160 && icon <= 165)))
                 enlarged = PhoneJunction.drawAt(x.type, x.junction, x.hasExit, x.exit,
                         x.angles, meters, limit);
-            String trial = "app=" + app + " source=" + source + " speed=" + speed
-                    + " threshold=" + limit + " policy=" + (stockDistance ? "road" : "speed") + " distance=" + meters
+            String trial = "app=" + app + " source=" + source
+                    + " threshold=" + limit + " policy=road" + " distance=" + meters
                     + " hasExit=" + x.hasExit + " roads=" + (x.angles == null ? 0 : x.angles.length)
                     + " matched=" + (enlarged != null)+" method="+mapState+" reason="+mapReason
                     +" frame="+(enlarged==null?"none":java.util.Arrays.toString(enlarged));
@@ -1107,7 +1104,7 @@ final class CpTurns {
             hour = cal.get(Calendar.HOUR_OF_DAY);
             minute = cal.get(Calendar.MINUTE);
             timeType = 1;
-            timeFormat = DisplayFormat.arrivalFormat(Dipo.mod==null?"24":Dipo.mod.settingString("arrival_time_format","24"),context);
+            timeFormat = DisplayFormat.arrivalFormat("12",context);
         } else {
             timeFormat = -1;
         }

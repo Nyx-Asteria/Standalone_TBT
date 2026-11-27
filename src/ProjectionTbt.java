@@ -402,8 +402,7 @@ public final class ProjectionTbt extends ModEntry {
                 || "com.google.android.projection.sink".equals(app.packageName)) {
             observeTbtTransport(mod, app);
         }
-        if ("com.google.android.projection.sink".equals(app.packageName)
-                && mod.settingBoolean("android_auto_tbt", true)) {
+        if ("com.google.android.projection.sink".equals(app.packageName)) {
             AndroidAuto.install(mod, app);
         }
         if ("com.mnsoft.navi".equals(app.packageName) || "com.daudio.app.dipo".equals(app.packageName)) {

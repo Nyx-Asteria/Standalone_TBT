@@ -10,7 +10,6 @@ public final class AaEnlargement {
  private final TollDisplay tollDisplay=new TollDisplay();
  private final JunctionTarget junctionTarget=new JunctionTarget();
  private final MapJunctionDisplay display=new MapJunctionDisplay();
- private final JunctionSpeed speed=new JunctionSpeed();
  private String lastTrace;
  private boolean linkageFailed;
  private void trace(String message) {
@@ -45,16 +44,15 @@ public final class AaEnlargement {
  private float[] drawChecked(String token,int type,int junction,int side,boolean hasExit,int exit,
          String road,float meters) {
   long now=SystemClock.elapsedRealtime();
-  if(mod==null || !mod.settingBoolean("stock_map_junction",true)) {trace("state=disabled");clear();return null;}
+  if(mod==null) {trace("state=disabled");clear();return null;}
   int facility=facility(type,junction,exit,road);
   if(facility==178 || facility==184 || facility==183) {
    display.clear();release();
-   float[] toll=mod.settingBoolean("toll_enlargement",true)?tollDisplay.draw(facility,meters,now):null;
+   float[] toll=tollDisplay.draw(facility,meters,now);
    trace("state=facility code="+facility+" enlarged="+(toll!=null));return toll;
   }
-  int limit="road".equals(mod.settingString("phone_junction_distance","road"))
-      ?PhoneJunction.roadThreshold(type):JunctionHints.threshold(speed.read());
-  if(limit<=0){trace("state=waiting_speed");clear();return null;}
+  int limit=PhoneJunction.roadThreshold(type);
+  if(limit<=0){trace("state=unsupported_threshold");clear();return null;}
   tollDisplay.clear();
   float[] ramp=RampEnlargement.draw(type,junction,hasExit,exit,meters,limit);
   if(ramp!=null){trace("state=factory_exit");display.clear();release();return ramp;}
