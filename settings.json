@@ -80,6 +80,14 @@
       "apply": "restart",
       "title": "Verbose navigation diagnostics",
       "description": "Enable detailed decoded packets and stock display traces for troubleshooting. Normal logging retains lifecycle, source capability, route transitions and errors. Logs may contain private route details."
+    },
+    {
+      "key": "third_party_navigation_trace",
+      "type": "toggle",
+      "default": false,
+      "apply": "restart",
+      "title": "Third-party navigation research trace",
+      "description": "Record separate Waze, MapQuest and other identified third-party CarPlay navigation packet summaries. Excludes known Apple Maps and Google Maps source names and omits road/destination text. Export completed traces to USB."
     }
   ]
 }

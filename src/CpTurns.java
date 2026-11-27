@@ -376,7 +376,26 @@ final class CpTurns {
     }
 
     /** Preserve lane ID / optional fields too, without guessing pocket-lane semantics. */
+    static String packetSource(Iap2NotiMsg.Iap2ObjGroup group) {
+        for (int k = 0; group != null && k < group.getItemCnt(); k++) {
+            Iap2NotiMsg.Iap2ObjItem item = group.getObjItem(k);
+            if (item == null || item.getItemId() != 19 || item.getItemParamType() != 10
+                    || item.getItemObjCount() <= 0) continue;
+            String[] v = item.getItemStringArray();
+            if (v != null && v.length > 0 && v[0] != null && !v[0].trim().isEmpty()) return v[0].trim();
+        }
+        return null;
+    }
+
+    static String focusedFields(Iap2NotiMsg.Iap2ObjGroup group) {
+        return inputFields(group, false);
+    }
+
     static String inputFields(Iap2NotiMsg.Iap2ObjGroup group) {
+        return inputFields(group, true);
+    }
+
+    private static String inputFields(Iap2NotiMsg.Iap2ObjGroup group, boolean includeText) {
         StringBuilder out = new StringBuilder();
         for (int k = 0; group != null && k < group.getItemCnt() && k < 24; k++) {
             Iap2NotiMsg.Iap2ObjItem item = group.getObjItem(k);
@@ -392,7 +411,7 @@ final class CpTurns {
                 long[] values = item.getItemLongArray();
                 if (values != null) out.append("/values=").append(java.util.Arrays.toString(
                         java.util.Arrays.copyOf(values, Math.min(values.length, 16))));
-            } else if (type == 10) {
+            } else if (type == 10 && includeText) {
                 String[] values = item.getItemStringArray();
                 if (values != null && values.length > 0 && values[0] != null) {
                     String value = values[0];

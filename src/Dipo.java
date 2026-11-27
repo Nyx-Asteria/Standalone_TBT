@@ -32,6 +32,7 @@ public final class Dipo {
     static final String[] RG_COMPONENTS = { "RouteGuidanceComponent0" };
 
     private static SessionJournal journal;
+    private static SessionJournal thirdPartyJournal;
     static ModContext mod;
     static LoadedApp app;
     static volatile IIap2Service iap2;
@@ -71,6 +72,10 @@ public final class Dipo {
         mod = m;
         app = a;
         if (a.context != null) journal = new SessionJournal(a.context, "stbt-carplay-sessions");
+        if (a.context != null && m.settingBoolean("third_party_navigation_trace", false)) {
+            try { thirdPartyJournal = new SessionJournal(a.context, "stbt-third-party-navigation"); }
+            catch (Throwable t) { m.error("Third-party navigation trace unavailable", t); }
+        }
         turnByTurn();
         if (!tbt) return;
         // Use lifecycle tracking only when the matching finalization hook is available.
@@ -82,6 +87,7 @@ public final class Dipo {
                     session.end();
                     log("CarPlay: session finalized generation=" + session.generation());
                     if (journal != null) journal.end("session finalized");
+                    if (thirdPartyJournal != null) thirdPartyJournal.end("session finalized");
                     post(new Runnable() { public void run() {
                         if (!session.active()) turns.disconnected();
                     }});
@@ -107,6 +113,7 @@ public final class Dipo {
                 post(new Runnable() { public void run() {
                     if (session.current(generation)) turns.disconnected();
                 }});
+                if (thirdPartyJournal != null) thirdPartyJournal.end("new CarPlay session");
                 if (journal != null) journal.start("transport=" + (p.args.length > 0 ? p.args[0] : "unknown"));
                 log("CarPlay: session started generation=" + session.generation() + " wireless=" + session.wireless());
                 requestSubscription("session started", 1000);
@@ -327,6 +334,34 @@ public final class Dipo {
         private final String[] lastFields = new String[3];
         private final long[] lastTraceAt = new long[3];
         private int traceGeneration = -1;
+        private int focusedGeneration = -1;
+        private String focusedSource;
+        private final String[] focusedLast = new String[3];
+
+        private void focusedTrace(int generation, int what, Iap2NotiMsg msg) {
+            SessionJournal j = thirdPartyJournal;
+            if (j == null) return;
+            if (focusedGeneration != generation) {
+                j.end("generation changed");
+                focusedGeneration = generation;
+                focusedSource = null;
+                java.util.Arrays.fill(focusedLast, null);
+            }
+            String source = what == RG_UPDATE ? CpTurns.packetSource(msg.getItemGroup()) : null;
+            if (source != null && !source.equals(focusedSource)) {
+                j.end("source changed");
+                focusedSource = source;
+                java.util.Arrays.fill(focusedLast, null);
+                if (ThirdPartyTrace.isThirdParty(source)) j.start("navigation source=" + source + " generation=" + generation);
+            }
+            if (!ThirdPartyTrace.isThirdParty(focusedSource)) return;
+            int slot = what - RG_UPDATE;
+            String fields = CpTurns.focusedFields(msg.getItemGroup());
+            if (!fields.equals(focusedLast[slot])) {
+                j.record("type=" + what + " source=" + focusedSource + fields);
+                focusedLast[slot] = fields;
+            }
+        }
         @Override
         public void connected(int component, String serial) {
             log("CarPlay: iAP2 listener connected component=" + component);
@@ -383,6 +418,8 @@ public final class Dipo {
                     } catch (Throwable diagnosticError) {
                         error("CarPlay packet trace", diagnosticError);
                     }
+                    try { focusedTrace(receivedGeneration, what, msg); }
+                    catch (Throwable diagnosticError) { error("Third-party navigation trace", diagnosticError); }
                     if (what == RG_UPDATE) turns.routeGuidance(msg);
                     else if (what == RG_MANEUVER) turns.maneuver(msg);
                     else turns.lanes(msg);
