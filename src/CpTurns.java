@@ -1194,6 +1194,8 @@ final class CpTurns {
         void read(int id, Iap2NotiMsg msg) {
             Iap2NotiMsg.Iap2ObjGroup g = msg == null ? null : msg.getItemGroup();
             if (g == null) return;
+            final int previousIndex = list == null || list.length == 0 ? -1 : list[0];
+            boolean numericReceived = false, formattedReceived = false, unitsReceived = false;
             for (int k = 0; k < g.getItemCnt(); k++) {
                 Iap2NotiMsg.Iap2ObjItem it = g.getObjItem(k);
                 if (it == null) continue;
@@ -1224,6 +1226,7 @@ final class CpTurns {
                         else if (item == 10) {
                             distNext = v[0];
                             hasNextDistance = true;
+                            numericReceived = true;
                         }
                         break;
                     }
@@ -1242,7 +1245,7 @@ final class CpTurns {
                             case 1: state = v[0]; break;
                             case 2: maneuverState = v[0]; break;
                             case 9: distLeftUnits = v[0]; break;
-                            case 12: nextUnits = v[0]; break;
+                            case 12: nextUnits = v[0]; unitsReceived = true; break;
                         }
                         break;
                     }
@@ -1261,13 +1264,18 @@ final class CpTurns {
                             case 3: road = v[0]; break;
                             case 4: destination = v[0]; break;
                             case 8: distLeftStr = v[0]; break;
-                            case 11: nextStr = v[0]; break;
+                            case 11: nextStr = v[0]; formattedReceived = true; break;
                             case 19: sourceName = v[0]; break;
                         }
                         break;
                     }
                 }
             }
+            final int currentIndex = list == null || list.length == 0 ? -1 : list[0];
+            if (!CpDistancePolicy.retainNumeric(previousIndex, currentIndex, numericReceived))
+                hasNextDistance = false;
+            if (!CpDistancePolicy.retainFormatted(previousIndex, currentIndex,
+                    numericReceived, formattedReceived, unitsReceived)) nextStr = "";
             if (list != null) {
                 listCountAtSelection = list == null ? 0 : count;
             }
