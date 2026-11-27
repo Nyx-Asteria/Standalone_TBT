@@ -29,3 +29,8 @@ Requires HMG-API >=1.1.0-rc.10; SDK pinned to daa083717f07565ba16dc8a4d26291b7d6
 - Final release must pass policy tests and configured author signing validation. Actual production-signed publication has not been performed.
 - Apple Maps and Google Maps are prior positive controls, not evidence of RC3 vehicle validation. Waze remains unverified; native stock-map enlargement requires compatible engine fingerprints.
 - USB removal tests simulate changes in mount identity. Physical removal, abrupt power loss and actual vehicle functionality remain separate validation items.
+
+## Final audit corrections
+- Attempt guarded destination-directory synchronization after payload and manifest publication and stale manifest retirement; warn and preserve verified exports if unavailable. Actual Android 4.4 directory fsync and abrupt power loss remain unverified.
+- Cross-project source audit against CPUL 823530b confirms matching shared identity API v2 and nonoverlapping CarPlay Core recipe regions. Native activation remains unverified.
+- Latest runtime CI passed (45930920550). No signed release or vehicle test is claimed.
