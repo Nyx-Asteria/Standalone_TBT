@@ -17,7 +17,7 @@ Phone navigation on Hyundai/Kia Gen5W instrument clusters and HUDs, independent 
 
 Requires HMG-API >=1.1.0-rc.10 and a checked vehicle hook map. Remove the original Phone Projection TBT package before installing this fork. Its new ID is `standalone-tbt`; the NEMESIS ID is `hmgapi.standalone-tbt`. This is a separate installation, not an update to the original signer or ID.
 
-When using Wireless CarPlay + Android Auto (WCP), disable WCP's **Turn-by-turn on the cluster and HUD** setting, apply and restart. Keep WCP's Wireless CarPlay master control enabled for wireless operation. The original standalone implementation has been reported working in that configuration on the US K5; the current candidate passes host build and policy CI; vehicle validation remains pending. Do not enable two navigation senders. This mod does not establish wireless connections.
+When using Wireless CarPlay + Android Auto (WCP), disable WCP's **Integrated turn-by-turn** setting, apply and restart. Existing saved true values survive the default change, so explicitly check this setting after upgrading. Keep WCP's Wireless CarPlay master control enabled for wireless operation. The original standalone implementation has been reported working in that configuration on the US K5; the current candidate passes host build and policy CI; vehicle validation remains pending. Do not enable two navigation senders. This mod does not establish wireless connections.
 
 See [installation](wiki/Installation.md) for package types. RC3 is not yet published. Use the Releases page for existing packages.
 

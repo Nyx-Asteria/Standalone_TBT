@@ -147,7 +147,7 @@ public final class ProjectionTbt extends ModEntry {
                             return;
                         }
                         if (name.equals("updateTBTInfo") && arity == 9) {
-                            if (mod.settingBoolean("junction_trial", true) && p.getThrowable() == null) {
+                            if (p.getThrowable() == null) {
                                 try {
                                     StringBuilder frame = new StringBuilder().append(android.os.SystemClock.elapsedRealtime());
                                     for (Object arg : p.args) frame.append(',').append(arg);
@@ -156,8 +156,7 @@ public final class ProjectionTbt extends ModEntry {
                                 } catch (RuntimeException error) { /* Optional trial must not affect stock navigation. */ }
                             }
                         }
-                        if (mod.settingBoolean("junction_capture", true)
-                                && (name.equals("updateTBTInfo") || name.equals("updateTPCrossroadName"))) {
+                        if (name.equals("updateTBTInfo") || name.equals("updateTPCrossroadName")) {
                             String capture = guidanceSnapshot(p.args);
                             if (!capture.equals(lastJunction)) {
                                 lastJunction = capture;
@@ -323,8 +322,7 @@ public final class ProjectionTbt extends ModEntry {
                         long now = android.os.SystemClock.elapsedRealtime();
                         Long last = sampled.get(type);
                         // Keep transition detail near a junction without polling the navigation engine.
-                        boolean junction = mod.settingBoolean("junction_capture", true)
-                                && (type == 0 || type == 1 || type == 2 || type == 6118);
+                        boolean junction = type == 0 || type == 1 || type == 2 || type == 6118;
                         if (last != null && now - last < (junction ? 100 : 500)) return;
                         String value = guidanceSnapshot(p.args);
                         if (value.equals(previous.get(type))) return;

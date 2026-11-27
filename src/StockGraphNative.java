@@ -58,18 +58,16 @@ public final class StockGraphNative {
         }catch(Exception ignored){ /* Private bounded diagnostics cannot interrupt navigation. */ }
     }
     static synchronized void schedule(final ModContext mod,final LoadedApp app) {
-        boolean live=mod.settingBoolean("stock_map_junction",true);
-        if(scheduled || SystemClock.elapsedRealtime()<retryAfter ||
-                !live)return;
+        if(scheduled || SystemClock.elapsedRealtime()<retryAfter)return;
         scheduled=true;
         new Thread(new Runnable(){public void run(){
             try {
                 Thread.sleep(250);
                 boolean diagnosticStart=false;
                 while(true) {
-                    boolean liveEnabled=mod.settingBoolean("stock_map_junction",true);
+                    boolean liveEnabled=true;
                     boolean probeEnabled=false;
-                    if(!mod.enabled() || (!liveEnabled && !probeEnabled)) {
+                    if(!mod.enabled()) {
                         synchronized(StockGraphNative.class){scheduled=false;}
                         return;
                     }
@@ -120,7 +118,7 @@ public final class StockGraphNative {
                 if(diagnosticStart)collect(mod,app,ranges);
                 mod.log("Stock map live ready: requested range<=1000m interval=1000ms non-overlapping");
                 Thread.sleep(1000);
-                while(mod.enabled() && mod.settingBoolean("stock_map_junction",true)) {
+                while(mod.enabled()) {
                     long started=SystemClock.elapsedRealtime();
                     long lease=Settings.Global.getLong(app.context.getContentResolver(),
                             hmgapi.mods.projection.carplay.StockMapJunction.REQUEST,0);

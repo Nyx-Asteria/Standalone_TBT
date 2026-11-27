@@ -32,6 +32,12 @@ jobs:
           import json, configparser, pathlib
           m=json.load(open('mod.json'))
           c=configparser.ConfigParser(interpolation=None); c.read('installer/NEMESIS.data')
+          import re
+          declared={s['key'] for s in json.load(open('settings.json'))['settings']}
+          assert declared=={'experimental_waze_recovery','verbose_diagnostics'}
+          for f in pathlib.Path('src').rglob('*.java'):
+              used=set(re.findall(r'setting(?:Boolean|String)\("([^"]+)"',f.read_text()))
+              assert used <= declared, (str(f), used-declared)
           assert m['id']=='standalone-tbt'
           assert c['nemesis']['id']=='hmgapi.'+m['id']
           assert c['nemesis']['package-version']==m['version']
