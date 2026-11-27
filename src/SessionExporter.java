@@ -67,6 +67,12 @@ public final class SessionExporter {
                             try { exportDirectory(new File(files, "stbt-third-party-navigation"), dest, "third-party-navigation", guard); }
                             catch (Exception e) { if (first == null) first = e; }
                         }
+                        try { exportBundles(new File(files, args[0] + "-session-bundles"), dest, guard); }
+                        catch (Exception e) { if (first == null) first = e; }
+                        if (!wcp) {
+                            try { exportBundles(new File(files, "stbt-third-party-bundles"), child(dest, "third-party-navigation"), guard); }
+                            catch (Exception e) { if (first == null) first = e; }
+                        }
                         if (first != null) throw first;
                     } catch (Exception e) { error = e.toString(); }
                 }
