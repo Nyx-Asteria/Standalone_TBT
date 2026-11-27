@@ -27,7 +27,12 @@ final class AndroidAuto {
             return;
         }
         // the AA library: protocol 1.6 and the turn-by-turn extras packed into its callbacks, in memory (file stays stock)
-        mod.nativePatch(app, "libautoreceiver_infobank.so");
+        if (AaTbtSupport.supports(new java.io.File("/system/lib/libautoreceiver_infobank.so"))) {
+            mod.nativePatch(app, "libautoreceiver_infobank.so");
+        } else {
+            // Keep the stock callback path available for basic guidance. Never force the expanded native parser.
+            mod.log("Android Auto: expanded native parser skipped (unrecognized stock library); retaining basic callback guidance");
+        }
         mod.hook(cl, "gpm.navigation_status.init", new MethodHook() {
             @Override
             protected void beforeHookedMethod(Param p) {

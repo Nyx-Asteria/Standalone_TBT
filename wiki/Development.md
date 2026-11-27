@@ -12,9 +12,15 @@ See [build instructions](../BUILD.md) and [changelog](../CHANGELOG.md).
 - `export-logs.sh` and `export-api-result.sh`: bounded rotating diagnostic snapshots and USB export.
 - `navigation-api/native`: project-owned ARM32 JNI helper source; proprietary engine is not included.
 
-## Planned work (not implemented)
+## Remaining work
 
-Audit WCP component-5 reattachment and guidance recovery, avoid clearing active guidance on bridge-only disconnects, compare the additional AA recipe, and verify US K5 engine ABI and fingerprints before extending the allowlist. Keep WCP connectivity separate. Do not run native queries against an unverified engine.
+Verify US K5 engine ABI and fingerprints before extending the allowlist. Keep WCP connectivity separate. Do not run native queries against an unverified engine.
+
+## Fork changes awaiting validation
+
+- Track CarPlay session lifecycle and preserve guidance during wireless component 4/5 disconnects; clear on finalization. Observe authenticated component 5 and late iAP2 service binding to request fresh guidance on the worker. Rate-limit requests and invalidate stale queued work. Retain original disconnect behavior on maps without finalization support.
+- Port WCP's native AA parser UTF-8 string correction for 48ee793a and a0bea1c4, add dbfe7bd2 (Canadian Ioniq 6), and check whole-file MD5 before requesting the expanded native parser. Unknown binaries retain the basic callback path; the native engine still checks patch regions.
+- Add host regression tests for lifecycle and AA library identification. Fork build, regression suite and in-vehicle verification remain pending.
 
 ## Validation
 
