@@ -1,5 +1,10 @@
 #!/system/bin/sh
 umask 077
+# Build-generated package version; unknown for old standalone test invocations.
+collector_version=unknown
+if [ -n "$HMGAPI_MOD_DIR" ] && [ -r "$HMGAPI_MOD_DIR/runtime-version.txt" ]; then
+    collector_version=$(cat "$HMGAPI_MOD_DIR/runtime-version.txt")
+fi
 history_dir=/data/hmgapi/logs/phone-projection-tbt-capture
 capture_pid=
 mkdir -p "$history_dir" || exit 1
@@ -53,7 +58,7 @@ while true; do
         case "$folder" in /storage/usb[012]/TBT-LOGS) ;; *) continue ;; esac
         case " $last_folders " in *" $folder "*) [ "$refresh_ticks" -eq 0 ] || continue ;; esac
         {
-            echo 'collector_runtime=1.0.0-rc.1'
+            echo "collector_runtime=$collector_version"
             echo "captured=$(date)"
             echo 'phase=collecting_current_logs'
         } > "$stage/status"
@@ -67,7 +72,7 @@ while true; do
         {
             echo "build=$(getprop ro.build.product)"
             echo "captured=$(date)"
-            echo 'collector_runtime=1.0.0-rc.1'
+            echo "collector_runtime=$collector_version"
             echo "boot_id=$(cat /proc/sys/kernel/random/boot_id 2>/dev/null)"
             echo "uptime=$(cat /proc/uptime 2>/dev/null)"
             cat "$stage/capture-status" "$stage/logcat-error.txt"
@@ -103,12 +108,12 @@ while true; do
             echo 'finished=1'
         } > "$stage/stock-guidance.log"
         {
-            echo 'collector=android-auto-1.0.0-rc.1'
+            echo "collector=android-auto-$collector_version"
             grep -E 'captured=|Android Auto TBT|Android Auto turn-by-turn|TBT transport app=com.google.android.projection.sink|TBT transport app=com.daudio.app.gpm' "$stage/stock-guidance.log" || :
             echo 'finished=1'
         } > "$stage/android-auto.log"
         {
-            echo 'collector=junction-capture-1.0.0-rc.1'
+            echo "collector=junction-capture-$collector_version"
             grep -E 'captured=|Stock graph probe|Stock navigation API|Phone junction|Junction trial|Junction capture|TBT transport|Cluster trace|guidance source|received route| turn index=|maneuver input' "$stage/stock-guidance.log" || :
             echo 'finished=1'
         } > "$stage/junction-capture.log"

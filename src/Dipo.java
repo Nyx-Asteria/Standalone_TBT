@@ -277,7 +277,7 @@ public final class Dipo {
                 });
             }
         });
-        log("Standalone TBT 1.0.0-rc.1: route guidance listener enabled");
+        log("Standalone TBT: route guidance listener enabled");
     }
 
     static void post(Runnable r) {

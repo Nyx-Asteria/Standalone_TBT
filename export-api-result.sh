@@ -1,6 +1,11 @@
 #!/system/bin/sh
 # Small private result; write failures must not flood the log or mark a failed copy complete.
 umask 077
+# Build-generated package version; unknown for old standalone test invocations.
+collector_version=unknown
+if [ -n "$HMGAPI_MOD_DIR" ] && [ -r "$HMGAPI_MOD_DIR/runtime-version.txt" ]; then
+    collector_version=$(cat "$HMGAPI_MOD_DIR/runtime-version.txt")
+fi
 trace_folders=
 trace_ticks=0
 error_file=/data/hmgapi/logs/phone-projection-tbt-capture/api-usb-write-error.txt
@@ -70,7 +75,7 @@ while true; do
                 for suffix in .1 ''; do
                     trace_source="$trace_base$suffix"
                     trace_target="$target_base$suffix"
-                    if [ -s "$trace_source" ] && ! cmp -s "$trace_source" "$trace_target" 2>/dev/null; then
+                    if [ -s "$trace_source" ] && ! cmp "$trace_source" "$trace_target" >/dev/null 2>&1; then
                         copy_result "$trace_source" "$trace_target" || copied=0
                     fi
                 done
@@ -80,17 +85,17 @@ while true; do
         target="$folder/api-result.txt"
         tmp="$folder/api-result.txt.part"
         if [ -n "$boot_id" ] && [ -s "$source" ] && grep -Fx "boot=$boot_id" "$source" >/dev/null; then
-            cmp -s "$source" "$target" 2>/dev/null && continue
+            cmp "$source" "$target" >/dev/null 2>&1 && continue
             copy_result "$source" "$target" || :
         else
             # Render locally first; a failed USB redirection is handled by copy_result.
             local_result=/data/hmgapi/logs/phone-projection-tbt-capture/api-waiting.txt
             {
-                echo 'collector=stock-road-api-1.0.0-rc.1'
+                echo "collector=stock-road-api-$collector_version"
                 echo "boot=$boot_id"
                 echo 'phase=waiting_for_current_boot_stock_process'
             } > "$local_result"
-            cmp -s "$local_result" "$target" 2>/dev/null || copy_result "$local_result" "$target" || :
+            cmp "$local_result" "$target" >/dev/null 2>&1 || copy_result "$local_result" "$target" || :
         fi
     done
     trace_folders="$current_folders"
