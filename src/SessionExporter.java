@@ -137,7 +137,7 @@ public final class SessionExporter {
         if (target.isFile() && Arrays.equals(expected, digest(target))) {
             guard.check();
             if (part.exists() && !part.delete()) throw new IOException("cannot remove stale partial");
-            complete(target, expected, guard);
+            complete(target, expected, guard, true);
             return;
         }
         if (target.exists()) throw new IOException("destination conflict: " + target.getName());
@@ -154,6 +154,7 @@ public final class SessionExporter {
                 while ((n = in.read(buffer)) != -1) {
                     total += n;
                     if (total > MAX_BYTES) throw new IOException("journal grew during copy");
+                    guard.check();
                     out.write(buffer, 0, n);
                 }
                 out.getFD().sync();
@@ -164,7 +165,7 @@ public final class SessionExporter {
             guard.check();
             if (target.exists() || !part.renameTo(target)) throw new IOException("cannot publish journal");
             published = true;
-            complete(target, expected, guard);
+            complete(target, expected, guard, false);
             System.out.println("Verified export: " + target.getName());
         } finally {
             if (!published) {
@@ -174,7 +175,7 @@ public final class SessionExporter {
     }
 
     /** Publish a per-file manifest only after the final USB file has been verified. */
-    private static void complete(File target, byte[] hash, Guard guard) throws Exception {
+    private static void complete(File target, byte[] hash, Guard guard, boolean alreadyVerified) throws Exception {
         guard.check();
         File dest = target.getParentFile();
         File marker = child(dest, target.getName() + ".complete");
@@ -184,7 +185,7 @@ public final class SessionExporter {
             int v = b & 255;
             hex.append(Character.forDigit(v >>> 4, 16)).append(Character.forDigit(v & 15, 16));
         }
-        if (!Arrays.equals(hash, digest(target))) throw new IOException("published journal verification failed");
+        if (!alreadyVerified && !Arrays.equals(hash, digest(target))) throw new IOException("published journal verification failed");
         byte[] manifest = ("SHA256 " + hex + "\nBYTES " + target.length()
                 + "\nFILE " + target.getName() + "\n").getBytes("UTF-8");
         byte[] expected = MessageDigest.getInstance("SHA-256").digest(manifest);
