@@ -35,6 +35,7 @@ jobs:
           assert m['id']=='standalone-tbt'
           assert c['nemesis']['id']=='hmgapi.'+m['id']
           assert c['nemesis']['package-version']==m['version']
+          assert c['nemesis']['depends'].strip('"')=='hmgapi@'+m['hmgapi']
           assert pathlib.Path('installer/mod/id').read_text().strip()==m['id']
           assert all(pathlib.Path(p).is_file() for rs in m['hooks']['native'].values() for p in rs)
           PY
@@ -46,6 +47,12 @@ jobs:
 
       - name: Session journal regression
         run: python3 tests/session_journal_test.py
+
+      - name: Java session export regression
+        run: |
+          mkdir -p out/session-export
+          javac --release 8 -d out/session-export src/SessionExporter.java tests/SessionExporterTest.java
+          java -cp out/session-export hmgapi.mods.sessionexport.SessionExporterTest
 
   release:
     needs: policy
@@ -122,6 +129,7 @@ jobs:
           version=$(python3 -c 'import json;print(json.load(open("mod.json"))["version"])')
           archive="dist/standalone-tbt-$version.zip"
           unzip -t "$archive"
+          test "$(unzip -p "$archive" runtime-version.txt)" = "$version"
           python3 tools/build_application_package.py "$archive" "dist/standalone-tbt-$version-nemesis-package.zip"
           unzip -t "dist/standalone-tbt-$version-nemesis-package.zip"
       - name: Publish verified release
