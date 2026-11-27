@@ -34,3 +34,7 @@ Collect the full TBT-LOGS folder, WCP logs and incremental firmware dumper RC4 i
 Disable experimental recovery and restart; if needed, remove this fork, apply removal and reinstall the known-good original. Use only one active TBT sender. WCP connectivity need not be changed.
 
 Source changes are not a verified signed release. Full compilation and vehicle testing remain pending.
+
+## Upcoming session logging (development source)
+
+CarPlay session journals are written asynchronously in DiPO's private storage. Each session has a unique filename, wall-clock and monotonic timestamps, and a start/end marker. Completed files are exported automatically to `TBT-LOGS/sessions/` on a mounted USB drive; a USB drive is not required during recording. The latest 12 completed files are retained locally, each approximately 2 MiB maximum; older files and earlier events in oversized sessions may be discarded. A process restart recovers leftover active files as interrupted sessions. The journal captures this mod's DiPO diagnostics, not all system/native logs. Existing diagnostic mechanisms remain available. Common MAC and credential patterns are redacted on a best-effort basis; logs may contain private navigation or device information, so review before sharing. USB export and full package build remain unverified on the vehicle.
