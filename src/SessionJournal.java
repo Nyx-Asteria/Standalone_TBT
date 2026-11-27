@@ -13,10 +13,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 /** Bounded private session journal. All disk work runs off projection callbacks. */
 final class SessionJournal {
     private static final long LIMIT = 2L * 1024 * 1024;
-    private static final int KEEP = 12, QUEUE = 256;
+    private static final int KEEP = 12, QUEUE = 256, LIFECYCLE = 32;
     private final Handler worker;
     private final File dir;
     private final AtomicInteger queued = new AtomicInteger();
+    private final AtomicInteger lifecycle = new AtomicInteger();
+    private int skippedSessions;
     // Each accepted generation owns its own drop counter, even while old work drains.
     private AtomicInteger dropped;
     private File active;
@@ -29,7 +31,7 @@ final class SessionJournal {
         HandlerThread thread = new HandlerThread(folder);
         thread.start();
         worker = new Handler(thread.getLooper());
-        worker.post(new Runnable() { public void run() {
+        post(new Runnable() { public void run() {
             if (!dir.isDirectory() && !dir.mkdirs()) return;
             recoverInterrupted();
             prune();
@@ -43,18 +45,26 @@ final class SessionJournal {
 
     synchronized void start(final String detail) {
         if (accepting) return;
+        // Reserve a slot for the matching end; never strand an admitted start.
+        if (lifecycle.get() >= LIFECYCLE - 1) {
+            if (skippedSessions < Integer.MAX_VALUE) skippedSessions++;
+            return;
+        }
         accepting = true;
         dropped = new AtomicInteger();
         final long wall = System.currentTimeMillis(), elapsed = SystemClock.elapsedRealtime();
-        worker.post(new Runnable() { public void run() {
+        final int skipped = skippedSessions;
+        if (!postLifecycle(new Runnable() { public void run() {
             active = null;
             if (!dir.isDirectory() && !dir.mkdirs()) return;
             recoverInterrupted();
-            prune();
+            if (!prune()) return;
             active = new File(dir, "session-" + wall + "-" + UUID.randomUUID().toString() + ".active");
             header = row("START " + bounded(detail), wall, elapsed);
             writeFailed = !append(active, header, true);
-        }});
+            if (skipped != 0) write(row("LOGGER skipped sessions due to lifecycle backlog=" + skipped));
+        }})) { accepting = false; dropped = null; }
+        else skippedSessions = 0;
     }
 
     synchronized void record(String message) {
@@ -63,7 +73,7 @@ final class SessionJournal {
         if (queued.incrementAndGet() > QUEUE) { queued.decrementAndGet(); sessionDropped.incrementAndGet(); return; }
         final long wall = System.currentTimeMillis(), elapsed = SystemClock.elapsedRealtime();
         final String raw = bounded(message);
-        if (!worker.post(new Runnable() { public void run() {
+        if (!post(new Runnable() { public void run() {
             try { if (active != null) {
                 int lost = sessionDropped.getAndSet(0);
                 if (lost != 0) write(row("LOGGER dropped queued events=" + lost));
@@ -79,7 +89,7 @@ final class SessionJournal {
         dropped = null;
         final long wall = System.currentTimeMillis(), elapsed = SystemClock.elapsedRealtime();
         final String raw = bounded("END " + reason);
-        worker.post(new Runnable() { public void run() {
+        postLifecycle(new Runnable() { public void run() {
             if (active == null) return;
             int lost = sessionDropped.getAndSet(0);
             if (lost != 0) write(row("LOGGER dropped queued events=" + lost));
@@ -98,6 +108,26 @@ final class SessionJournal {
         }});
     }
 
+    private boolean postLifecycle(final Runnable task) {
+        lifecycle.incrementAndGet();
+        if (post(new Runnable() { public void run() {
+            try { task.run(); } finally { lifecycle.decrementAndGet(); }
+        }})) return true;
+        lifecycle.decrementAndGet();
+        return false;
+    }
+
+    // Filesystem permission failures must not kill the journal HandlerThread.
+    private boolean post(final Runnable task) {
+        return worker.post(new Runnable() { public void run() {
+            try { task.run(); }
+            catch (SecurityException failure) {
+                active = null;
+                writeFailed = true;
+            }
+        }});
+    }
+
     private void write(String line) {
         if (active == null) return;
         if (active.length() + line.length() * 4L > LIMIT) {
@@ -113,7 +143,7 @@ final class SessionJournal {
         try (FileOutputStream out = new FileOutputStream(file, true)) {
             out.write(line.getBytes("UTF-8"));
             if (sync) out.getFD().sync();
-        } catch (IOException ignored) { return false; }
+        } catch (IOException | SecurityException ignored) { return false; }
         return true;
     }
 
@@ -148,33 +178,32 @@ final class SessionJournal {
     }
 
     /** Keep failed recordings separate from the completed retention budget. */
-    private void pruneOrphans() {
-        File[] files = dir.listFiles(new FilenameFilter() {
-            public boolean accept(File d, String n) {
-                return n.startsWith("session-") && n.endsWith(".active") && new File(d, n).isFile();
-            }
-        });
-        if (files == null || files.length <= KEEP) return;
-        Arrays.sort(files, new Comparator<File>() {
-            public int compare(File a, File b) { return a.getName().compareTo(b.getName()); }
-        });
-        for (int i = 0; i < files.length - KEEP; i++) {
-            File f = files[i];
-            if (f.equals(active)) continue;
-            
-            f.delete();
-        }
+    private boolean pruneOrphans() {
+        return pruneFiles(".active", true);
     }
 
-    private void prune() {
-        pruneOrphans();
+    private boolean pruneFiles(final String suffix, boolean orphan) {
         File[] files = dir.listFiles(new FilenameFilter() {
-            public boolean accept(File d, String n) { return n.endsWith(".log"); }
+            public boolean accept(File d, String n) {
+                return n.startsWith("session-") && n.endsWith(suffix) && new File(d, n).isFile();
+            }
         });
-        if (files == null || files.length <= KEEP) return;
+        if (files == null) return false;
+        int count = files.length;
         Arrays.sort(files, new Comparator<File>() {
             public int compare(File a, File b) { return a.getName().compareTo(b.getName()); }
         });
-        for (int i=0; i<files.length-KEEP; i++) files[i].delete();
+        for (File f : files) {
+            if (count <= KEEP) break;
+            if (f.equals(active)) continue;
+            if (f.delete() || !f.exists()) count--;
+        }
+        return count <= KEEP;
+    }
+
+    private boolean prune() {
+        boolean orphans = pruneOrphans();
+        boolean completed = pruneFiles(".log", false);
+        return orphans && completed;
     }
 }
