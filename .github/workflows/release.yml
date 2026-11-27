@@ -89,9 +89,30 @@ jobs:
           javac --release 8 -cp "$ANDROID_JAR:$RUNNER_TEMP/runtime-stubs" -d "$RUNNER_TEMP/runtime" @"$RUNNER_TEMP/runtime.args"
           umask 077
           test -n "$MOD_KEY" && test -n "$MOD_KEY_PUB"
-          printf '%s' "$MOD_KEY" | base64 -d > "$SIGNING_KEY"
-          printf '%s' "$MOD_KEY_PUB" | base64 -d > "$SIGNING_KEY.pub"
-          test -s "$SIGNING_KEY" && test -s "$SIGNING_KEY.pub"
+          # HMG-API key files are base64 text, not binary DER. Accept either
+          # the original file text or an outer base64 encoding of that file.
+          python3 - <<'PY'
+          import os, base64, pathlib, subprocess, tempfile
+          key = pathlib.Path(os.environ["SIGNING_KEY"])
+          def normalize(name, private):
+              raw = os.environ[name].strip().encode("ascii")
+              for _ in range(3):
+                  try:
+                      decoded = base64.b64decode(b"".join(raw.split()), validate=True)
+                  except ValueError:
+                      break
+                  args = ["openssl", "pkey", "-inform", "DER", "-noout"]
+                  if not private: args.append("-pubin")
+                  result = subprocess.run(args, input=decoded, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                  if result.returncode == 0:
+                      return base64.b64encode(decoded) + b"\n"
+                  raw = decoded
+              raise SystemExit(name + " is not a supported HMG-API key encoding")
+          key.write_bytes(normalize("MOD_KEY", True))
+          pathlib.Path(str(key)+".pub").write_bytes(normalize("MOD_KEY_PUB", False))
+          PY
+          unset MOD_KEY MOD_KEY_PUB
+          test "$(java -cp "$RUNNER_TEMP/runtime" hmgapi.engine.Signing uuid "$SIGNING_KEY.pub")" = "d515981b-afc8-8230-ae0f-62d32de366bc"
           sh build.sh
       - name: Remove signing material
         if: always()
