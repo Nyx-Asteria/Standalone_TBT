@@ -59,6 +59,29 @@ public final class SessionLogWriterTest {
             try {SessionLogWriter.recoverLegacy(legacy);throw new AssertionError("conflict accepted");}
             catch(IOException expected){}
             check(oldActive.isFile()&&read(recovered).equals("original interrupted bytes\n"));
+            File stress=new File(root,"stress");check(stress.mkdir());
+            SessionLogWriter burst=new SessionLogWriter(stress);
+            burst.start(100,"first");
+            for(int i=0;i<20000;i++)burst.record(100,INFO,CORE,"burst "+i);
+            burst.finish(100,"first end",0);
+            burst.start(101,"second");
+            burst.record(101,INFO,CORE,"second only");
+            burst.finish(101,"second end",0);
+            burst.shutdown();check(burst.await(20000));check(burst.failure()==null);
+            File first=null,second=null;
+            for(File f:stress.listFiles()){
+                if(f.getName().contains("session-100_"))first=f;
+                if(f.getName().contains("session-101_"))second=f;
+            }
+            check(first!=null&&second!=null);
+            check(read(new File(first,"summary.txt")).contains("termination=first end"));
+            check(read(new File(second,"summary.txt")).contains("queue_dropped=0"));
+            check(read(new File(second,"session.log")).contains("second only"));
+            File broken=new File(root,"broken.open"),conflict=new File(root,"broken"),good=new File(root,"good.open");
+            check(broken.mkdir()&&conflict.mkdir()&&good.mkdir());
+            try{SessionLogWriter.recover(root);throw new AssertionError("conflict ignored");}catch(IOException expected){}
+            check(broken.isDirectory());
+            check(new File(root,"good/errors.log").isFile());
             System.out.println("SessionLogWriterTest passed");
         }finally{SessionLogWriter.delete(root);}
     }
