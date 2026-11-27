@@ -38,11 +38,17 @@ final class SessionJournal {
         }});
     }
 
+    synchronized void beginAttempt(String detail) {
+        end("superseded by session start");
+        start(detail);
+    }
+
     synchronized void start(final String detail) {
         if (accepting) return;
         accepting = true;
         final long wall = System.currentTimeMillis(), elapsed = SystemClock.elapsedRealtime();
         worker.post(new Runnable() { public void run() {
+            active = null;
             if (!dir.isDirectory() && !dir.mkdirs()) return;
             active = new File(dir, "session-" + wall + "-" + UUID.randomUUID().toString() + ".active");
             header = row("START " + bounded(detail), wall, elapsed);
