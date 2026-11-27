@@ -9,7 +9,7 @@ final class CpInputTrace {
   try {
    File f=new File(c.getFilesDir(),"hmgapi-carplay-input.log");
    if(f.length()>2097152){File old=new File(f.getPath()+".1");if(old.exists()&&!old.delete())return;if(!f.renameTo(old))return;}
-   String row="1.0.5\t"+SystemClock.elapsedRealtime()+"\t"+System.currentTimeMillis()+"\t"+text.replace('\t',' ').replace('\n',' ').replace('\r',' ')+"\n";
+   String row="1.0.0-rc.1\t"+SystemClock.elapsedRealtime()+"\t"+System.currentTimeMillis()+"\t"+text.replace('\t',' ').replace('\n',' ').replace('\r',' ')+"\n";
    try(FileOutputStream out=new FileOutputStream(f,true)){out.write(row.getBytes("UTF-8"));}
   }catch(Exception ignored){}
  }

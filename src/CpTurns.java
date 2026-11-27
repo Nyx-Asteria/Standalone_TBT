@@ -388,6 +388,10 @@ final class CpTurns {
                 int[] values = item.getItemIntArray();
                 if (values != null) out.append("/values=").append(java.util.Arrays.toString(
                         java.util.Arrays.copyOf(values, Math.min(values.length, 16))));
+            } else if (type == 3 || type == 7) {
+                long[] values = item.getItemLongArray();
+                if (values != null) out.append("/values=").append(java.util.Arrays.toString(
+                        java.util.Arrays.copyOf(values, Math.min(values.length, 16))));
             } else if (type == 10) {
                 String[] values = item.getItemStringArray();
                 if (values != null && values.length > 0 && values[0] != null) {
@@ -470,6 +474,7 @@ final class CpTurns {
         }
         tripRefreshLogged = false;
         lastTurnTrace = null;
+        lastRouteStateTrace = null;
         Dipo.turnsHandler.removeCallbacks(refreshTrip);
         reset();
         if (!showingGuidance) return;
@@ -543,6 +548,7 @@ final class CpTurns {
     }
 
     private String lastOutputState;
+    private String lastRouteStateTrace;
     private void outputState(String state) {
         if (state.equals(lastOutputState)) return;
         lastOutputState = state;
@@ -552,6 +558,13 @@ final class CpTurns {
     /** one component's update to the cluster (DiPO e/u.a(Integer, Object), with the build's changes) */
     void turn(Integer id, Update u) {
         if (id < 0 || u == null) return;
+        String routeTrace = "CarPlay route state source=" + u.sourceName + " component=" + id + " state=" + u.state
+                + " sourceSupportsGuidance=" + (u.hasSupports ? String.valueOf(u.supports) : "absent")
+                + " maneuverIndexes=" + java.util.Arrays.toString(u.list);
+        if (!routeTrace.equals(lastRouteStateTrace)) {
+            Dipo.log(routeTrace);
+            lastRouteStateTrace = routeTrace;
+        }
         if (u.state < 0) {
             outputState("waiting for route state component=" + id);
             return;
@@ -620,7 +633,7 @@ final class CpTurns {
                 + x.facilityTrace() + " next=" + (next == null ? "missing"
                         : next.type + "/" + next.exit + "/" + next.distance + next.facilityTrace());
         if (!trace.equals(lastTurnTrace)) {
-            Dipo.log("CarPlay 1.0.5 turn " + trace);
+            Dipo.log("CarPlay 1.0.0-rc.1 turn " + trace);
             lastTurnTrace = trace;
         }
         // Publish the name after the display frame below; some clusters gate names by display type.
@@ -1136,12 +1149,12 @@ final class CpTurns {
         long eta, timeLeft;
         int[] list;
         int listCountAtSelection;
-        boolean visible, lanesShown, supports, hasNextDistance;
+        boolean visible, lanesShown, supports, hasSupports, hasNextDistance;
 
         /** as DiPO: a component id of 0 or less starts with nothing set (not even the defaults) */
         Update(int id, Iap2NotiMsg msg) {
-            if (msg == null || id <= 0) return;
             clear();
+            if (msg == null || id < 0) return;
             read(id, msg);
         }
 
@@ -1168,6 +1181,7 @@ final class CpTurns {
             lanesShown = false;
             sourceName = "";
             supports = false;
+            hasSupports = false;
         }
 
         /** the fields this message carries (by iAP2 type: 1/5 uint8/16, 2/6 uint32, 3/7 uint64, 8 enum, 9 bool, 10 string) */
@@ -1176,6 +1190,7 @@ final class CpTurns {
             if (g == null) return;
             for (int k = 0; k < g.getItemCnt(); k++) {
                 Iap2NotiMsg.Iap2ObjItem it = g.getObjItem(k);
+                if (it == null) continue;
                 int item = it.getItemId(), n = it.getItemObjCount();
                 switch (it.getItemParamType()) {
                     case 1:
@@ -1184,22 +1199,21 @@ final class CpTurns {
                         switch (item) {
                             case 13:
                                 if (v != null) {
-                                    list = new int[n];
-                                    for (int j = 0; j < n; j++) list[j] = v[j];
+                                    list = java.util.Arrays.copyOf(v, Math.min(n, v.length));
                                 } else {
                                     list = null;
                                 }
                                 break;
-                            case 14: count = v != null ? v[0] : 0; break;
-                            case 16: laneIndex = v != null ? v[0] : 0; break;
-                            case 17: laneCount = v != null ? v[0] : 0; break;
+                            case 14: count = v != null && v.length > 0 ? v[0] : 0; break;
+                            case 16: laneIndex = v != null && v.length > 0 ? v[0] : 0; break;
+                            case 17: laneCount = v != null && v.length > 0 ? v[0] : 0; break;
                         }
                         break;
                     }
                     case 2:
                     case 6: {
                         int[] v = n > 0 ? it.getItemIntArray() : null;
-                        if (v == null) break;
+                        if (v == null || v.length == 0) break;
                         if (item == 7) distLeft = v[0];
                         else if (item == 10) {
                             distNext = v[0];
@@ -1231,7 +1245,7 @@ final class CpTurns {
                         if (v == null) break;
                         if (item == 15) visible = v[0] != 0;
                         else if (item == 18) lanesShown = v[0] != 0;
-                        else if (item == 20) supports = v[0] != 0;
+                        else if (item == 20) { supports = v[0] != 0; hasSupports = true; }
                         break;
                     }
                     case 10: {
@@ -1357,7 +1371,7 @@ final class CpTurns {
                             } else {
                                 angles = null;
                             }
-                        } else if (item == 11 && v != null) {
+                        } else if (item == 11 && v != null && v.length > 0) {
                             exit = v[0];
                             hasExit = true;
                         }
@@ -1365,7 +1379,7 @@ final class CpTurns {
                     }
                     case 5: {
                         int[] v = it.getItemIntArray();
-                        if (item == 12 && v != null) linkedLane = v[0];
+                        if (item == 12 && v != null && v.length > 0) linkedLane = v[0];
                         break;
                     }
                     case 6: {
