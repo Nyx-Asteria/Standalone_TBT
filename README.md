@@ -32,3 +32,7 @@ Upstream 1.0.5 reported 39 Java and 10 Python tests, recorded-input replays, D8 
 Create `TBT-LOGS` at the USB root before reproducing a problem. Collect the entire folder; review location and route information before sharing. See [log guide](wiki/Logs-and-Issue-Reporting.md).
 
 AGPL-3.0; see [LICENSE](LICENSE) and [NOTICE.txt](NOTICE.txt). Original authorship and third-party notices are retained. Proprietary engines, firmware, private captures and signing keys are not distributed.
+
+## RC1 update and testing
+
+See [upgrade and vehicle-test instructions](UPDATE.md) and [RC1 release notes](RELEASE-v1.0.0-rc.1.md). Experimental Waze guidance recovery is disabled by default and requires restart to apply. Waze compatibility remains unverified.
