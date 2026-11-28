@@ -1,4 +1,4 @@
-# Standalone TBT — 1.0.0-rc.3 (development candidate)
+# Standalone TBT — 1.0.0-rc.4 (development candidate)
 
 Phone navigation on Hyundai/Kia Gen5W instrument clusters and HUDs, independent of the wireless connection mod. Based on [ch0iiih's Phone Projection TBT 1.0.5](https://github.com/ch0iiih/HMG_Phone_Projection_TBT), with English settings and a separate package identity.
 
@@ -19,7 +19,7 @@ Requires HMG-API >=1.1.0-rc.10 and a checked vehicle hook map. Remove the origin
 
 When using Wireless CarPlay + Android Auto (WCP), disable WCP's **Integrated turn-by-turn** setting, apply and restart. Existing saved true values survive the default change, so explicitly check this setting after upgrading. Keep WCP's Wireless CarPlay master control enabled for wireless operation. The original standalone implementation has been reported working in that configuration on the US K5; the current candidate passes host build and policy CI; vehicle validation remains pending. Do not enable two navigation senders. This mod does not establish wireless connections.
 
-See [installation](wiki/Installation.md) for package types. RC3 is not yet published. Use the Releases page for existing packages.
+See [installation](wiki/Installation.md) for package types. RC4 is not yet published. Use the Releases page for existing packages.
 
 ## Compatibility and development
 
@@ -35,4 +35,4 @@ AGPL-3.0; see [LICENSE](LICENSE) and [NOTICE.txt](NOTICE.txt). Original authorsh
 
 ## Candidate testing
 
-See [upgrade and vehicle-test instructions](UPDATE.md) and [previous RC2 release notes](RELEASE-v1.0.0-rc.2.md). See [RC3 candidate release notes](RELEASE-v1.0.0-rc.3.md) for changes and remaining validation. Experimental Waze guidance recovery is disabled by default and requires restart to apply. Waze compatibility remains unverified.
+See [upgrade and vehicle-test instructions](UPDATE.md) and [previous RC2 release notes](RELEASE-v1.0.0-rc.2.md). See [RC4 candidate release notes](RELEASE-v1.0.0-rc.4.md) for changes and remaining validation. Experimental Waze guidance recovery is disabled by default and requires restart to apply. Waze compatibility remains unverified.
