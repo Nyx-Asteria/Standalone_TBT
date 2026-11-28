@@ -22,7 +22,7 @@ javac --release 8 -Xlint:-options -cp "$ANDROID_JAR:$tmp/runtime:$tmp/stubs" -d 
 jar cf "$tmp/classes.jar" -C "$tmp/classes" hmgapi
 "$D8" --min-api 19 --lib "$ANDROID_JAR" --classpath "$tmp/runtime" --classpath "$tmp/stubs" --output "$tmp/dex" "$tmp/classes.jar"
 jar cMf "$tmp/mod/hooks.jar" -C "$tmp/dex" classes.dex
-cp mod.json settings.json export-logs.sh export-api-result.sh export-sessions.sh NOTICE.txt "$tmp/mod/"
+cp mod.json settings.json export-logs.sh export-api-result.sh NOTICE.txt "$tmp/mod/"
 cp native/prebuilt/libstockgraph.so "$tmp/mod/"
 cp -R recipes "$tmp/mod/"
 version=$(sed -n 's/.*"version": "\([^"]*\)".*/\1/p' mod.json)
