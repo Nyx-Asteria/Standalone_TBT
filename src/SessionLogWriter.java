@@ -119,6 +119,14 @@ final class SessionLogWriter {
         long last=androidIndependentMonotonic();
         try {
             ensureDir(root);
+            // Only the new STBT writer owns recovery of retired flat journals.
+            // No old writer remains active in this process.
+            String legacy = root.getName().equals("stbt-session-bundles") ? "stbt-carplay-sessions" :
+                root.getName().equals("stbt-third-party-bundles") ? "stbt-third-party-navigation" : null;
+            if (legacy != null) {
+                try { recoverLegacy(new File(root.getParentFile(),legacy)); }
+                catch(IOException ex) { failure=ex.getMessage(); }
+            }
             recover(root);
             spoolReady=true;
             requestExport();
@@ -270,6 +278,28 @@ final class SessionLogWriter {
         FileOutputStream out=new FileOutputStream(file);
         try { out.write(text.getBytes("UTF-8")); out.getFD().sync(); } finally { out.close(); }
     }
+    static void recoverLegacy(File root) throws IOException {
+        if(!root.isDirectory())return;
+        File[] files=root.listFiles();
+        if(files==null)throw new IOException("cannot list legacy recordings");
+        IOException failure=null;
+        for(File f:files) {
+            String name=f.getName();
+            if(!name.matches("session-[0-9]+-[0-9a-f-]{36}\\.active"))continue;
+            try {
+                if(!f.isFile() || !f.getCanonicalFile().equals(new File(root.getCanonicalFile(),name)))continue;
+                File target=new File(root,name.substring(0,name.length()-7)+"-interrupted.log");
+                if(target.exists() || !target.getCanonicalFile().equals(new File(root.getCanonicalFile(),target.getName())))
+                    throw new IOException("legacy recording recovery conflict");
+                // Preserve original bytes; suffix identifies interrupted recording.
+                // Never append repeatedly, truncate, or delete historical evidence.
+                try(RandomAccessFile handle=new RandomAccessFile(f,"rw")){handle.getFD().sync();}
+                if(!f.renameTo(target))throw new IOException("legacy recording recovery rename failed");
+            }catch(IOException ex){if(failure==null)failure=ex;}
+        }
+        if(failure!=null)throw failure;
+    }
+
     static void recover(File root) throws IOException {
         File[] files=root.listFiles();
         if(files==null) return;

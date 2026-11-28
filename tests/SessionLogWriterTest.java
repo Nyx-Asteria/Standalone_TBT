@@ -46,6 +46,19 @@ public final class SessionLogWriterTest {
             check(summary.contains("events_subscriptions=3"));
             check(summary.contains("error_count=1"));
             check(summary.contains("first_event_ms="+nativeAt));
+            File legacy=new File(root,"legacy");check(legacy.mkdir());
+            String base="session-123-12345678-1234-1234-1234-123456789abc";
+            File oldActive=new File(legacy,base+".active");
+            SessionLogWriter.writeText(oldActive,"original interrupted bytes");
+            SessionLogWriter.recoverLegacy(legacy);
+            File recovered=new File(legacy,base+"-interrupted.log");
+            check(!oldActive.exists()&&read(recovered).equals("original interrupted bytes\n"));
+            SessionLogWriter.recoverLegacy(legacy);
+            check(read(recovered).equals("original interrupted bytes\n"));
+            SessionLogWriter.writeText(oldActive,"conflicting original");
+            try {SessionLogWriter.recoverLegacy(legacy);throw new AssertionError("conflict accepted");}
+            catch(IOException expected){}
+            check(oldActive.isFile()&&read(recovered).equals("original interrupted bytes\n"));
             System.out.println("SessionLogWriterTest passed");
         }finally{SessionLogWriter.delete(root);}
     }
