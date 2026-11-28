@@ -274,6 +274,10 @@ final class SessionLogWriter {
         File[] files=root.listFiles();
         if(files==null) return;
         for(File f:files) if(f.isDirectory() && f.getName().endsWith(".open")) {
+            for(String name:new String[]{"session.log","errors.log"}) {
+                File payload=new File(f,name);
+                if(!payload.exists())writeText(payload,"");
+            }
             FileOutputStream out=new FileOutputStream(new File(f,"summary.txt"),true);
             try { out.write("\ntermination=unknown; recovered unfinished session\n".getBytes("UTF-8")); out.getFD().sync(); }
             finally { out.close(); }

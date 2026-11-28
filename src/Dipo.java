@@ -31,8 +31,8 @@ public final class Dipo {
     static final int RG_UPDATE = 120, RG_MANEUVER = 121, RG_LANES = 122;
     static final String[] RG_COMPONENTS = { "RouteGuidanceComponent0" };
 
-    private static SessionJournal journal;
-    private static SessionJournal thirdPartyJournal;
+    private static SessionRecording recording;
+    private static SessionRecording thirdPartyJournal;
     static ModContext mod;
     static LoadedApp app;
     static volatile IIap2Service iap2;
@@ -51,13 +51,15 @@ public final class Dipo {
 
     static void log(String m) {
         mod.log(m);
-        if (journal != null) journal.record(m);
+
+        if (recording != null) recording.record(m);
         if(app!=null)CpInputTrace.record(app.context,m);
     }
 
     static void error(String m, Throwable t) {
         mod.error(m, t);
-        if (journal != null) journal.record(m + " error=" + t.getClass().getSimpleName());
+
+        if (recording != null) recording.error(m + " error=" + t.getClass().getSimpleName());
         if(app!=null)CpInputTrace.record(app.context,m+" error="+t);
     }
 
@@ -71,12 +73,12 @@ public final class Dipo {
     public static void start(ModContext m, LoadedApp a) {
         mod = m;
         app = a;
-        if (a.context != null && journal == null) {
-            try { journal = new SessionJournal(a.context, "stbt-carplay-sessions"); }
-            catch (Throwable t) { m.error("Session journal unavailable", t); }
+        if (a.context != null && recording == null) {
+            try { recording = new SessionRecording(a.context, "stbt-session-bundles", false); }
+            catch (Throwable t) { m.error("Directory session recorder unavailable", t); }
         }
         if (a.context != null && thirdPartyJournal == null && m.settingBoolean("verbose_diagnostics", false)) {
-            try { thirdPartyJournal = new SessionJournal(a.context, "stbt-third-party-navigation"); }
+            try { thirdPartyJournal = new SessionRecording(a.context, "stbt-third-party-bundles", true); }
             catch (Throwable t) { m.error("Third-party navigation trace unavailable", t); }
         }
         turnByTurn();
@@ -89,11 +91,18 @@ public final class Dipo {
                 @Override protected void beforeHookedMethod(Param p) {
                     session.end();
                     log("CarPlay: session finalized generation=" + session.generation());
-                    if (journal != null) journal.end("session finalized");
+
+                    if (recording != null) recording.record("session finalization entered");
                     if (thirdPartyJournal != null) thirdPartyJournal.end("session finalized");
                     post(new Runnable() { public void run() {
                         if (!session.active()) turns.disconnected();
                     }});
+                }
+                @Override protected void afterHookedMethod(Param p) {
+                    if (recording != null) {
+                        if (p.hasThrowable()) recording.error("session finalization threw");
+                        recording.end("session finalized");
+                    }
                 }
             });
             try {
@@ -109,15 +118,21 @@ public final class Dipo {
             }
         }
         mod.hook(app.classLoader, "dipo.carplay.session_started", new MethodHook() {
+            @Override protected void beforeHookedMethod(Param p) {
+                if (recording != null) recording.beginAttempt("transport=" + (p.args.length > 0 ? p.args[0] : "unknown"));
+            }
             @Override protected void afterHookedMethod(Param p) {
-                if (p.getThrowable() != null) return;
+                if (p.getThrowable() != null) {
+                    if (recording != null) { recording.error("session startup threw"); recording.end("failed startup"); }
+                    return;
+                }
                 session.start(p.args.length > 0 && Integer.valueOf(1).equals(p.args[0]), lifecycle);
                 final int generation = session.generation();
                 post(new Runnable() { public void run() {
                     if (session.current(generation)) turns.disconnected();
                 }});
                 if (thirdPartyJournal != null) thirdPartyJournal.end("new CarPlay session");
-                if (journal != null) journal.beginAttempt("transport=" + (p.args.length > 0 ? p.args[0] : "unknown"));
+
                 log("CarPlay: session started generation=" + session.generation() + " wireless=" + session.wireless());
                 requestSubscription("session started", 1000);
             }
@@ -343,7 +358,7 @@ public final class Dipo {
         private final String[] focusedLast = new String[3];
 
         private void focusedTrace(int generation, int what, Iap2NotiMsg msg) {
-            SessionJournal j = thirdPartyJournal;
+            SessionRecording j = thirdPartyJournal;
             if (j == null) return;
             if (focusedGeneration != generation) {
                 j.end("generation changed");
