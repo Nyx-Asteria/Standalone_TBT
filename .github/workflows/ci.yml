@@ -1,7 +1,7 @@
 name: CarPlay policy tests
 on:
   push:
-    branches: [main, k5-log2-cleanup, rc4-final]
+    branches: [main, k5-log2-cleanup, rc4-final, "3.0.0"]
   pull_request:
   workflow_dispatch:
   workflow_call:
