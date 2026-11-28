@@ -73,6 +73,13 @@ public final class SessionExporter {
                             try { exportBundles(new File(files, "stbt-third-party-bundles"), child(dest, "third-party-navigation"), guard); }
                             catch (Exception e) { if (first == null) first = e; }
                         }
+                        if (!wcp) {
+                            File capture=new File("/data/hmgapi/logs/phone-projection-tbt-capture");
+                            try { exportSnapshots(new File(capture,"snapshots"),dest,guard,false); }
+                            catch(Exception e){if(first==null)first=e;}
+                            try { exportSnapshots(new File(capture,"api-snapshots"),dest,guard,true); }
+                            catch(Exception e){if(first==null)first=e;}
+                        }
                         if (first != null) throw first;
                     } catch (Exception e) { error = e.toString(); }
                 }
@@ -132,6 +139,59 @@ public final class SessionExporter {
     private static void directory(File f) throws IOException {
         if (!f.isDirectory() && !f.mkdirs() && !f.isDirectory())
             throw new IOException("cannot create " + f.getName());
+    }
+
+    private static final String[] CAPTURE_SNAPSHOTS={"phone-projection-tbt.log","stock-guidance.log",
+        "android-auto.log","junction-capture.log","export-status.txt"};
+    private static final String[] API_SNAPSHOTS={"api-result.txt","junction-match.log","aa-junction-match.log",
+        "aa-input.log","aa-raw-packets.log","carplay-tbt-output.log","aa-tbt-output.log","stock-tbt-output.log",
+        "stock-cluster-input.log","carplay-cluster-input.log","carplay-input.log","stock-road-graph.log"};
+
+    static void exportSnapshots(File source,File dest,Guard guard,boolean api)throws Exception{
+        if(!source.isDirectory())return;
+        Exception failure=null;
+        String[] names=api?API_SNAPSHOTS:CAPTURE_SNAPSHOTS;
+        for(String name:names){
+            for(String suffix:api&&!name.equals("api-result.txt")?new String[]{".1",""}:new String[]{""}){
+                try{
+                    File file=child(source,name+suffix);
+                    if(!file.isFile())continue;
+                    guard.check();directory(dest);
+                    exportSnapshot(file,dest,guard);
+                }catch(Exception e){if(failure==null)failure=e;}
+            }
+        }
+        if(failure!=null)throw failure;
+    }
+    static void exportSnapshot(File source,File dest,Guard guard)throws Exception{
+        guard.check();
+        File target=child(dest,source.getName()),part=child(dest,source.getName()+".snapshot-part");
+        long length=source.length();
+        if(length>MAX_BYTES)throw new IOException("snapshot exceeds export limit");
+        byte[] expected=digest(source);
+        guard.check();
+        if(target.isFile()&&Arrays.equals(expected,digest(target)))return;
+        if(target.exists()&&!target.isFile())throw new IOException("snapshot destination conflict");
+        if(dest.getUsableSpace()<length+65536)throw new IOException("USB space low");
+        if(part.exists()&&(!part.isFile()||!part.delete()))throw new IOException("snapshot partial conflict");
+        guard.check();
+        try(InputStream in=new FileInputStream(source);FileOutputStream out=new FileOutputStream(part)){
+            byte[] buffer=new byte[32768];int n;long total=0;
+            while((n=in.read(buffer))!=-1){
+                guard.check();total+=n;if(total>MAX_BYTES)throw new IOException("snapshot size limit");
+                out.write(buffer,0,n);
+            }
+            out.getFD().sync();
+        }
+        guard.check();
+        if(!Arrays.equals(expected,digest(part))||!Arrays.equals(expected,digest(source)))
+            throw new IOException("snapshot changed during export; retry");
+        guard.check();
+        // Android/Linux rename replaces a regular file atomically. Never unlink
+        // the previous good snapshot first; failure leaves it available.
+        if(!part.renameTo(target))throw new IOException("snapshot publication failed");
+        flushDirectory(dest,guard);
+        if(!Arrays.equals(expected,digest(target)))throw new IOException("snapshot final verification failed");
     }
 
     static void exportDirectory(File source, File root, String kind) throws Exception {

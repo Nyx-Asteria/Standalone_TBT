@@ -46,7 +46,9 @@ jobs:
           assert all(pathlib.Path(p).is_file() for rs in m['hooks']['native'].values() for p in rs)
           PY
       - name: USB logging regression
-        run: python3 tests/export_refresh_test.py
+        run: |
+          python3 tests/export_refresh_test.py
+          python3 tests/api_result_export_test.py
 
       - name: Session journal regression
         run: python3 tests/session_journal_test.py

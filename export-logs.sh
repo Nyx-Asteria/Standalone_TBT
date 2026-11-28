@@ -8,6 +8,8 @@ fi
 history_dir=/data/hmgapi/logs/phone-projection-tbt-capture
 capture_pid=
 mkdir -p "$history_dir" || exit 1
+snapshot_dir="$history_dir/snapshots"
+mkdir -p "$snapshot_dir" || exit 1
 stage="$history_dir/export.$$"
 mkdir -p "$stage" || exit 1
 logcat -v threadtime -f "$history_dir/capture.log" -r 2048 -n 5 -s HMG-API:I '*:S' &
@@ -35,13 +37,13 @@ recent_file() {
     dd if="$1" bs=4096 skip="$first" count="$count" 2>/dev/null || :
 }
 publish() {
-    # Never move files between filesystems; copy first, then rename on the USB itself.
+    # Publish locally; only the Java root service writes USB.
     if (cat "$1" > "$2.part" && mv "$2.part" "$2") 2> "$stage/write-error"; then
         return 0
     fi
     error=$(cat "$stage/write-error")
     if [ "$error" != "$last_write_error" ]; then
-        echo "TBT USB export failed: $error"
+        echo "TBT local snapshot failed: $error"
         last_write_error="$error"
     fi
     return 1
@@ -49,13 +51,8 @@ publish() {
 last_folders=
 refresh_ticks=0
 while true; do
-    folders=
-    for folder in /storage/usb[012]/TBT-LOGS; do
-        [ -d "$folder" ] || continue
-        folders="$folders $folder"
-    done
+    folders="$snapshot_dir"
     for folder in $folders; do
-        case "$folder" in /storage/usb[012]/TBT-LOGS) ;; *) continue ;; esac
         case " $last_folders " in *" $folder "*) [ "$refresh_ticks" -eq 0 ] || continue ;; esac
         {
             echo "collector_runtime=$collector_version"
@@ -127,11 +124,11 @@ while true; do
             if [ "$failed" -eq 0 ]; then echo 'phase=complete'; else echo 'phase=complete_with_secondary_errors'; fi
             echo 'finished=1'
         } > "$stage/status-final"
-        publish "$stage/status-final" "$folder/export-status.txt"
+        publish "$stage/status-final" "$folder/export-status.txt" || failed=1
         # Superseded old exporter temporary files are removed only after current log succeeds.
         rm -f "$folder/.phone-projection-tbt.log.part" "$folder/.stock-guidance.log.part" \
             "$folder/.android-auto.log.part" "$folder/.junction-capture.log.part"
-        echo "Exported current TBT logs to $folder"
+        [ "$failed" -ne 0 ] || echo "Prepared current TBT snapshot"
     done
     last_folders="$folders"
     refresh_ticks=$(( (refresh_ticks + 1) % 15 ))

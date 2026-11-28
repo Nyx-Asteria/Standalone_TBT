@@ -8,7 +8,9 @@ if [ -n "$HMGAPI_MOD_DIR" ] && [ -r "$HMGAPI_MOD_DIR/runtime-version.txt" ]; the
 fi
 trace_folders=
 trace_ticks=0
-error_file=/data/hmgapi/logs/phone-projection-tbt-capture/api-usb-write-error.txt
+error_file=/data/hmgapi/logs/phone-projection-tbt-capture/api-local-write-error.txt
+snapshot_dir=/data/hmgapi/logs/phone-projection-tbt-capture/api-snapshots
+mkdir -p "$snapshot_dir" || exit 1
 mkdir -p /data/hmgapi/logs/phone-projection-tbt-capture || exit 1
 last_error=
 copy_result() {
@@ -21,7 +23,7 @@ copy_result() {
 report_error() {
     error=$(cat "$error_file" 2>/dev/null)
     if [ "$error" != "$last_error" ]; then
-        echo "TBT API USB write failed: $error"
+        echo "TBT API local snapshot failed: $error"
         last_error="$error"
     fi
 }
@@ -29,7 +31,7 @@ while true; do
     boot_id=$(cat /proc/sys/kernel/random/boot_id 2>/dev/null)
     source=/data/data/com.mnsoft.navi/files/hmgapi-stock-road-api.txt
     current_folders=
-    for folder in /storage/usb[012]/TBT-LOGS; do
+    for folder in "$snapshot_dir"; do
         [ -d "$folder" ] || continue
         already_copied=0
         case " $trace_folders " in *" $folder "*) already_copied=1 ;; esac
@@ -88,7 +90,7 @@ while true; do
             cmp "$source" "$target" >/dev/null 2>&1 && continue
             copy_result "$source" "$target" || :
         else
-            # Render locally first; a failed USB redirection is handled by copy_result.
+            # Render locally first; publication failures are handled by copy_result.
             local_result=/data/hmgapi/logs/phone-projection-tbt-capture/api-waiting.txt
             {
                 echo "collector=stock-road-api-$collector_version"
